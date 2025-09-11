@@ -53,7 +53,8 @@ class OutputSettingsPage(QFrame, Base):
     # 翻译输出文件夹
     def add_widget_translation_output_path(self, parent, config) -> None:
         def widget_init(widget):
-            info_cont = self.tra("当前输出文件夹为") + f" {config.get("label_output_path")}"
+            output_path = config.get("label_output_path")
+            info_cont = self.tra("当前输出文件夹为") + f" {output_path}"
             widget.set_description(info_cont)
             widget.set_text(self.tra("选择文件夹"))
             widget.set_icon(FluentIcon.FOLDER_ADD)
@@ -101,7 +102,8 @@ class OutputSettingsPage(QFrame, Base):
     # 润色输出文件夹
     def add_widget_polishing_output_path(self, parent, config) -> None:
         def widget_init(widget):
-            info_cont = self.tra("当前输出文件夹为") + f" {config.get("polishing_output_path")}"
+            polishing_path = config.get("polishing_output_path")
+            info_cont = self.tra("当前输出文件夹为") + f" {polishing_path}"
             widget.set_description(info_cont)
             widget.set_text(self.tra("选择文件夹"))
             widget.set_icon(FluentIcon.FOLDER_ADD)

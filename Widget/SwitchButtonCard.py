@@ -46,3 +46,7 @@ class SwitchButtonCard(CardWidget):
     # 设置选中状态
     def set_checked(self, checked: bool):
         self.switch_button.setChecked(checked)
+    
+    # 获取选中状态
+    def is_checked(self) -> bool:
+        return self.switch_button.isChecked()

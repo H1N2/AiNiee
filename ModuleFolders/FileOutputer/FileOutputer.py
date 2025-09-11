@@ -22,7 +22,7 @@ from ModuleFolders.FileOutputer.RenpyWriter import RenpyWriter
 from ModuleFolders.FileOutputer.TransWriter import TransWriter
 from ModuleFolders.FileOutputer.I18nextWriter import I18nextWriter
 from ModuleFolders.FileOutputer.PoWriter import PoWriter
-from ModuleFolders.FileOutputer.BabeldocPdfWriter import BabeldocPdfWriter
+# from ModuleFolders.FileOutputer.BabeldocPdfWriter import BabeldocPdfWriter  # 暂时禁用
 from PluginScripts.IOPlugins.CustomRegistry import CustomWriter
 
 
@@ -56,7 +56,7 @@ class FileOutputer:
         self.register_writer(ParatranzWriter)
         self.register_writer(TPPWriter)
         self.register_writer(OfficeConversionDocWriter)
-        self.register_writer(BabeldocPdfWriter)
+        # self.register_writer(BabeldocPdfWriter)  # 暂时禁用
 
         # 注册插件式 Writer
         CustomWriter.register_writers(self)
@@ -119,11 +119,11 @@ class FileOutputer:
                 translated_config=TranslationOutputConfig(True, config.get("translated_suffix", ".translated"), output_path),
                 bilingual_config=TranslationOutputConfig(True, config.get("bilingual_suffix", '.bilingual'), output_path / "bilingual_srt"),
             )
-        elif project_type in (TxtWriter.get_project_type(), EpubWriter.get_project_type(), BabeldocPdfWriter.get_project_type()):
+        elif project_type in (TxtWriter.get_project_type(), EpubWriter.get_project_type()):  # BabeldocPdfWriter暂时禁用
             bilingual_dir_map = {
                 TxtWriter.get_project_type(): "bilingual_txt",
                 EpubWriter.get_project_type(): "bilingual_epub",
-                BabeldocPdfWriter.get_project_type(): "bilingual_pdf"
+                # BabeldocPdfWriter.get_project_type(): "bilingual_pdf"  # 暂时禁用
             }
             return create_output_config(
                 translated_config=default_translated_config,

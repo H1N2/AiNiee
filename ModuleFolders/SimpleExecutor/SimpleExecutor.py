@@ -136,7 +136,8 @@ class SimpleExecutor(Base):
         self.print("")
         self.info(f"接口测试结果：共测试 {len(api_keys)} 个接口，成功 {len(success)} 个，失败 {len(failure)} 个 ...")
         if len(failure) >0:
-            self.error(f"失败的接口密钥 - {", ".join(failure)}")
+            failure_keys = ", ".join(failure)
+            self.error(f"失败的接口密钥 - {failure_keys}")
         self.print("")
 
         # 发送完成事件

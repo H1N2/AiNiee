@@ -9,13 +9,14 @@ import chardet
 import charset_normalizer
 import rich
 from bs4 import BeautifulSoup
-from mediapipe.tasks.python import text, BaseOptions
-from mediapipe.tasks.python.text import LanguageDetector
+# from mediapipe.tasks.python import text, BaseOptions
+# from mediapipe.tasks.python.text import LanguageDetector
 
 from ModuleFolders.Cache.CacheFile import CacheFile
 from ModuleFolders.Cache.CacheItem import CacheItem
 
-_LANG_DETECTOR_INSTANCE: LanguageDetector | None = None
+# _LANG_DETECTOR_INSTANCE: LanguageDetector | None = None
+_LANG_DETECTOR_INSTANCE = None
 """语言检测器单例实现"""
 
 VARIOUS_LETTERS_RANGE = r'a-zA-Z\uFF21-\uFF3A\uFF41-\uFF5A'
@@ -114,7 +115,8 @@ def get_lang_detector():
             # 或者根据您的应用程序进行适当处理。
             raise
 
-    return _LANG_DETECTOR_INSTANCE
+    # return _LANG_DETECTOR_INSTANCE
+    return None  # 暂时禁用MediaPipe
 
 
 # 释放语言检测器

@@ -1,0 +1,7 @@
+1、额外增加1个模块和界面，用来通过调试翻译API实现翻译；
+2、该模块实现同时调用多个翻译服务API来实现翻译，然后调用AI大模型来对比翻译质量。
+3、支持百度翻译API，文档见https://fanyi-api.baidu.com/doc/21
+4、支持火山翻译API，文档见https://api.volcengine.com/api-docs/view?action=TranslateText&serviceCode=translate&version=2020-06-01
+5、支持腾讯翻译API，文档见https://cloud.tencent.com/document/product/551/15619
+
+6、有API接口设置和管理

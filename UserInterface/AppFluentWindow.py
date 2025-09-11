@@ -48,6 +48,7 @@ from UserInterface.Table.PromptDictionaryPage import PromptDictionaryPage
 from UserInterface.Table.ExclusionListPage import ExclusionListPage
 
 from StevExtraction import jtpp
+from UserInterface.TranslationAPIDebug.TranslationAPIDebugPage import TranslationAPIDebugPage
 from UserInterface.Extraction_Tool.Export_Source_Text import Widget_export_source_text
 from UserInterface.Extraction_Tool.Import_Translated_Text import Widget_import_translated_text
 from UserInterface.Extraction_Tool.Export_Update_Text import Widget_update_text
@@ -317,6 +318,9 @@ class AppFluentWindow(FluentWindow, Base): #主窗口
 
         self.plugins_settings_page = PluginsSettingsPage("plugins_settings_page", self, plugin_manager)
         self.addSubInterface(self.plugins_settings_page, FluentIcon.APPLICATION, self.tra("插件设置"), NavigationItemPosition.SCROLL)
+
+        self.translation_api_debug_page = TranslationAPIDebugPage("translation_api_debug_page", self)
+        self.addSubInterface(self.translation_api_debug_page, FluentIcon.CODE, self.tra("翻译API调试"), NavigationItemPosition.SCROLL)
 
     # 添加润色设置
     def add_prompt_setting_pages(self, plugin_manager) -> None:

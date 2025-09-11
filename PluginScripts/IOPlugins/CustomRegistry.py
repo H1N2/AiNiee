@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any, Self
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
 
 from ModuleFolders.FileOutputer.BaseWriter import BaseTranslationWriter
 from ModuleFolders.FileReader.BaseReader import BaseSourceReader
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
 
 class CustomWriter(BaseTranslationWriter):
     """插件式Writer，继承后可自动注册"""
-    _writers: list[Self] = []
+    _writers: list[CustomWriter] = []
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -29,7 +30,7 @@ class CustomWriter(BaseTranslationWriter):
 
 class CustomReader(BaseSourceReader):
     """插件式Reader，继承后可自动注册"""
-    _readers: list[Self] = []
+    _readers: list[CustomReader] = []
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)

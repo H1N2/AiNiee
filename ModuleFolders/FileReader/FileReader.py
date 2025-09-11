@@ -23,7 +23,7 @@ from ModuleFolders.FileReader.RenpyReader import RenpyReader
 from ModuleFolders.FileReader.TransReader import TransReader
 from ModuleFolders.FileReader.I18nextReader import I18nextReader
 from ModuleFolders.FileReader.PoReader import PoReader
-from ModuleFolders.FileReader.BabeldocPdfReader import BabeldocPdfReader
+# from ModuleFolders.FileReader.BabeldocPdfReader import BabeldocPdfReader  # 暂时禁用
 from PluginScripts.IOPlugins.CustomRegistry import CustomReader
 
 
@@ -51,7 +51,7 @@ class FileReader():
         self.register_reader(PoReader)
         self.register_reader(ParatranzReader)
         self.register_reader(OfficeConversionDocReader)
-        self.register_reader(BabeldocPdfReader)
+        # self.register_reader(BabeldocPdfReader)  # 暂时禁用
 
         # 注册插件式 Reader
         CustomReader.register_readers(self)
