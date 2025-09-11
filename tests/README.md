@@ -21,6 +21,8 @@
 - `simple_test.py` - 简单测试示例
 - `ok_tencent.py` - 腾讯翻译API示例
 - `ok_test_volcaon.py` - 火山翻译API示例
+- `check_api_status.py` - API状态检查工具
+- `simple_verify.py` - 简单验证工具
 
 ## 使用说明
 
