@@ -116,3 +116,8 @@ class RequestLimiter:
             tokens1 = self.num_tokens_from_messages(message1)
             tokens_text1 = self.num_tokens_from_str(text1)
             return tokens1 + tokens_text1
+    
+    def can_make_request(self) -> bool:
+        """检查是否可以发送请求（不消耗tokens）"""
+        with self.lock:
+            return self.rpm_limiter() and self.tpm_limiter(100)  # 使用100作为估算tokens
