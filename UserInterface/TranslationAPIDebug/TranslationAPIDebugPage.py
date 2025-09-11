@@ -459,10 +459,15 @@ class TranslationAPIDebugPage(QFrame, Base):
         result_text = self.tra("翻译结果对比：\n\n")
         
         for api_name, result in results.items():
-            if result["success"]:
-                result_text += f"{api_name}:\n{result['translation']}\n\n"
+            # 检查result是否为字典类型
+            if isinstance(result, dict):
+                if result.get("success", False):
+                    result_text += f"{api_name}:\n{result.get('translation', 'N/A')}\n\n"
+                else:
+                    result_text += f"{api_name}: {self.tra('翻译失败')} - {result.get('error', '未知错误')}\n\n"
             else:
-                result_text += f"{api_name}: {self.tra('翻译失败')} - {result['error']}\n\n"
+                # 如果result不是字典，可能是字符串错误信息
+                result_text += f"{api_name}: {self.tra('翻译失败')} - {str(result)}\n\n"
 
         # 如果有AI质量评估结果
         if "ai_comparison" in results:
@@ -600,7 +605,7 @@ class TranslationAPIDebugPage(QFrame, Base):
         button.setText(self.tra("测试连接"))
 
         # 显示测试结果
-        if result["success"]:
+        if isinstance(result, dict) and result.get("success", False):
             status_label.setText(self.tra("连接成功"))
             status_label.setStyleSheet("color: green;")
             InfoBar.success(
@@ -615,9 +620,10 @@ class TranslationAPIDebugPage(QFrame, Base):
         else:
             status_label.setText(self.tra("连接失败"))
             status_label.setStyleSheet("color: red;")
+            error_msg = result.get('error', str(result)) if isinstance(result, dict) else str(result)
             InfoBar.error(
                 title=self.tra("错误"),
-                content=f"{api_type.upper()} API {self.tra('连接失败')}: {result['error']}",
+                content=f"{api_type.upper()} API {self.tra('连接失败')}: {error_msg}",
                 orient=Qt.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP,

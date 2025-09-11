@@ -194,13 +194,10 @@ class TranslationAPIManager:
         """测试火山翻译API（使用新版SDK）"""
         try:
             # 获取API密钥配置
-            print('测试火山翻译API')
             api_key = self.config.get("volcano_api_key", "")
             access_key = self.config.get("volcano_access_key", "")
             secret_key_encoded = self.config.get("volcano_secret_key", "")
             secret_key = secret_key_encoded
-            print(access_key)
-            print(secret_key_encoded)
             # 优先使用组合格式的API密钥
 ##            if api_key and ':' in api_key:
 ##                try:
