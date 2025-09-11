@@ -223,6 +223,9 @@ class TaskConfig(Base):
         think_depth = self.platforms.get(target_platform).get("think_depth")
         thinking_budget = self.platforms.get(target_platform).get("thinking_budget", -1)
 
+        # 获取代理配置
+        proxy_config = self._get_proxy_for_platform(target_platform)
+        
         params = {
             "target_platform": target_platform,
             "api_url": api_url,
@@ -240,9 +243,33 @@ class TaskConfig(Base):
             "extra_body": extra_body,
             "think_switch": think_switch,
             "think_depth": think_depth,
-            "thinking_budget": thinking_budget
+            "thinking_budget": thinking_budget,
+            "proxy": proxy_config
         }
-
+    
+    def _get_proxy_for_platform(self, target_platform):
+        """
+        获取指定平台的代理配置
+        
+        参数:
+            target_platform: 目标平台名称
+            
+        返回:
+            代理配置字符串或None
+        """
+        # 优先使用平台特定的代理配置
+        platform_config = self.platforms.get(target_platform, {})
+        proxy = platform_config.get("proxy")
+        if proxy:
+            return proxy
+            
+        # 如果没有平台特定配置，使用全局代理配置
+        if hasattr(self, 'proxy_enable') and self.proxy_enable:
+            proxy_url = getattr(self, 'proxy_url', '')
+            if proxy_url:
+                return proxy_url
+                
+        return None
 
 
         return params

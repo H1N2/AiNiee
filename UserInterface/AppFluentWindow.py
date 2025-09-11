@@ -19,6 +19,7 @@ from UserInterface.BaseNavigationItem import BaseNavigationItem
 
 from UserInterface.VersionManager.VersionManager import VersionManager
 from UserInterface.Settings.AppSettingsPage import AppSettingsPage
+from UserInterface.Settings.ProxySettingsPage import ProxySettingsPage
 
 from UserInterface.Platform.PlatformPage import PlatformPage
 from UserInterface.EditView.EditViewPage import EditViewPage
@@ -326,6 +327,9 @@ class AppFluentWindow(FluentWindow, Base): #主窗口
 
         self.translation_api_debug_page = TranslationAPIDebugPage("translation_api_debug_page", self)
         self.addSubInterface(self.translation_api_debug_page, FluentIcon.CODE, self.tra("翻译API调试"), NavigationItemPosition.SCROLL)
+        
+        self.proxy_settings_page = ProxySettingsPage("proxy_settings_page", self)
+        self.addSubInterface(self.proxy_settings_page, FluentIcon.GLOBE, self.tra("网络代理设置"), NavigationItemPosition.SCROLL)
 
     # 添加润色设置
     def add_prompt_setting_pages(self, plugin_manager) -> None:

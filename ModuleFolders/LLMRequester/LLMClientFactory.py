@@ -15,6 +15,7 @@ def create_httpx_client(
         max_connections=256,
         max_keepalive_connections=128,
         keepalive_expiry=30,
+        proxy=None,
         **kwargs
 ):
     """
@@ -25,20 +26,35 @@ def create_httpx_client(
         max_connections: 最大并发连接数
         max_keepalive_connections: 最大保持活跃的连接数
         keepalive_expiry: 连接保持活跃的秒数
+        proxy: 代理设置，支持字符串或字典格式
         **kwargs: 传递给httpx.Client的其他参数
 
     返回:
         配置好的httpx.Client实例
     """
-    return httpx.Client(
-        http2=http2,
-        limits=httpx.Limits(
+    client_kwargs = {
+        "http2": http2,
+        "limits": httpx.Limits(
             max_connections=max_connections,
             max_keepalive_connections=max_keepalive_connections,
             keepalive_expiry=keepalive_expiry
         ),
         **kwargs
-    )
+    }
+    
+    # 添加代理配置
+    if proxy:
+        if isinstance(proxy, str):
+            # 字符串格式代理，同时设置HTTP和HTTPS
+            client_kwargs["proxies"] = {
+                "http://": proxy,
+                "https://": proxy
+            }
+        elif isinstance(proxy, dict):
+            # 字典格式代理，支持更细粒度配置
+            client_kwargs["proxies"] = proxy
+    
+    return httpx.Client(**client_kwargs)
 
 
 class LLMClientFactory:
@@ -129,25 +145,31 @@ class LLMClientFactory:
 
     # 各种客户端创建函数
     def _create_openai_client(self, config, api_key):
+        # 获取代理配置
+        proxy = self._get_proxy_config(config)
         return OpenAI(
             base_url=config.get("api_url"),
             api_key=api_key,
-            http_client=create_httpx_client()
+            http_client=create_httpx_client(proxy=proxy)
         )
 
     def _create_anthropic_client(self, config):
+        # 获取代理配置
+        proxy = self._get_proxy_config(config)
         return anthropic.Anthropic(
             base_url=config.get("api_url"),
             api_key=config.get("api_key"),
-            http_client=create_httpx_client()
+            http_client=create_httpx_client(proxy=proxy)
         )
 
     def _create_anthropic_bedrock(self, config):
+        # 获取代理配置
+        proxy = self._get_proxy_config(config)
         return anthropic.AnthropicBedrock(
             aws_region=config.get("region"),
             aws_access_key=config.get("access_key"),
             aws_secret_key=config.get("secret_key"),
-            http_client=create_httpx_client()
+            http_client=create_httpx_client(proxy=proxy)
         )
 
     def _create_boto3_bedrock(self, config):
@@ -159,25 +181,66 @@ class LLMClientFactory:
         )
 
     def _create_cohere_client(self, config):
+        # 获取代理配置
+        proxy = self._get_proxy_config(config)
         return cohere.ClientV2(
             base_url=config.get("api_url"),
             api_key=config.get("api_key"),
             timeout=config.get("request_timeout", 60),
-            httpx_client=create_httpx_client()
+            httpx_client=create_httpx_client(proxy=proxy)
         )
 
     def _create_google_client(self, config):
         api_key = config.get("api_key")
         api_url = config.get("api_url")
         extra_body = config.get("extra_body")
+        
+        # 获取代理配置
+        proxy = self._get_proxy_config(config)
 
         http_options = {}
         if api_url:
             http_options["base_url"] = api_url
         if extra_body:
             http_options["extra_body"] = extra_body
+        
+        # 为Google客户端添加代理支持
+        if proxy:
+            http_options["client"] = create_httpx_client(proxy=proxy)
 
         if http_options:
             return genai.Client(api_key=api_key, http_options=http_options)
         else:
             return genai.Client(api_key=api_key)
+    
+    def _get_proxy_config(self, config):
+        """
+        获取代理配置
+        
+        参数:
+            config: 平台配置字典
+            
+        返回:
+            代理配置字符串或None
+        """
+        # 优先使用平台特定的代理配置
+        proxy = config.get("proxy")
+        if proxy:
+            return proxy
+            
+        # 如果没有平台特定配置，尝试从全局配置获取
+        try:
+            from Base.Base import Base
+            base = Base()
+            global_config = base.load_config()
+            
+            # 检查全局代理是否启用
+            if global_config.get("proxy_enable", False):
+                proxy_url = global_config.get("proxy_url", "")
+                if proxy_url:
+                    return proxy_url
+        except Exception:
+            # 如果获取全局配置失败，忽略错误
+            pass
+            
+        return None
