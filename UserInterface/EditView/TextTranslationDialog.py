@@ -84,13 +84,8 @@ class TranslationWorkerThread(QThread):
             response = requester.send_request(messages)
 
             if response and response.get('choices'):
-                # 使用ResponseExtractor提取和处理响应
-                try:
-                    extractor = ResponseExtractor(config)
-                    translated_text = extractor.extract_translation_result(response)
-                except:
-                    # 如果ResponseExtractor失败，使用简单提取
-                    translated_text = response['choices'][0]['message']['content'].strip()
+                # 直接提取翻译内容
+                translated_text = response['choices'][0]['message']['content'].strip()
 
                 if translated_text:
                     # 缓存结果
