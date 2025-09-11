@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QGroupBox, QScrollArea
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer
 from qfluentwidgets import HorizontalSeparator, PillPushButton, MessageBox, InfoBar, InfoBarPosition, Pivot, qrouter, PushButton, FluentIcon
 
 from Base.Base import Base
@@ -127,6 +127,64 @@ class TranslationAPIDebugPage(QFrame, Base):
         self.container.addWidget(self.test_widget)
         self.pivot.setCurrentItem("test")
         self.current_page = "test"
+        
+        # 启动定时器检查翻译接口变更
+        self.setup_translation_model_monitor()
+
+    def setup_translation_model_monitor(self):
+        """设置翻译模型监控定时器"""
+        self.translation_model_timer = QTimer()
+        self.translation_model_timer.timeout.connect(self.check_translation_model_change)
+        self.translation_model_timer.start(5000)  # 每5秒检查一次
+        self.last_translation_model = self.get_current_translation_model()
+
+    def check_translation_model_change(self):
+        """检查翻译模型是否发生变更"""
+        try:
+            current_model = self.get_current_translation_model()
+            if current_model != self.last_translation_model:
+                self.last_translation_model = current_model
+                self.update_ai_model_combo()
+        except Exception as e:
+            print(f"检查翻译模型变更时出错: {e}")
+
+    def update_ai_model_combo(self):
+        """更新对比AI模型下拉框"""
+        try:
+            if not hasattr(self, 'ai_model_combo'):
+                return
+                
+            # 获取当前选择的模型
+            current_selection = self.ai_model_combo.combo_box.currentText()
+            
+            # 获取可用模型列表
+            available_models = self.get_tested_success_models()
+            current_translation_model = self.get_current_translation_model()
+            
+            # 如果有翻译接口模型且不在可用模型列表中，则添加到列表开头
+            if current_translation_model and current_translation_model not in available_models:
+                available_models.insert(0, current_translation_model)
+            
+            # 清空并重新填充下拉框
+            self.ai_model_combo.combo_box.clear()
+            if available_models:
+                self.ai_model_combo.combo_box.addItems(available_models)
+                
+                # 优先设置为当前翻译接口模型
+                if current_translation_model:
+                    index = self.ai_model_combo.combo_box.findText(current_translation_model)
+                    if index >= 0:
+                        self.ai_model_combo.set_current_index(index)
+                # 如果翻译接口模型不存在，尝试恢复之前的选择
+                elif current_selection:
+                    index = self.ai_model_combo.combo_box.findText(current_selection)
+                    if index >= 0:
+                        self.ai_model_combo.set_current_index(index)
+            else:
+                self.ai_model_combo.combo_box.addItem(self.tra("暂无测试通过的模型"))
+                
+        except Exception as e:
+            print(f"更新AI模型下拉框时出错: {e}")
 
     def add_api_settings_section(self, container, config):
         """添加API设置区域"""
@@ -356,19 +414,32 @@ class TranslationAPIDebugPage(QFrame, Base):
         self.target_lang_combo.combo_box.currentTextChanged.connect(self.save_current_config)
         controls_layout.addWidget(self.target_lang_combo)
 
-        # AI模型选择（用于对比翻译）- 只显示测试通过的模型
+        # AI模型选择（用于对比翻译）- 优先使用翻译接口模型
         available_models = self.get_tested_success_models()
+        current_translation_model = self.get_current_translation_model()
+        
+        # 如果有翻译接口模型且不在可用模型列表中，则添加到列表开头
+        if current_translation_model and current_translation_model not in available_models:
+            available_models.insert(0, current_translation_model)
+        
         self.ai_model_combo = ComboBoxCard(
             title=self.tra("对比AI模型"),
-            description=self.tra("选择用于对比翻译的AI大模型（仅显示测试通过的模型）"),
+            description=self.tra("选择用于对比翻译的AI大模型（自动同步翻译接口模型）"),
             items=available_models if available_models else [self.tra("暂无测试通过的模型")]
         )
         self.ai_model_combo.setMaximumWidth(200)
-        # 设置默认AI模型
-        ai_model = config.get("ai_model_for_comparison", "gpt-3.5-turbo")
-        index = self.ai_model_combo.combo_box.findText(ai_model)
-        if index >= 0:
-            self.ai_model_combo.set_current_index(index)
+        
+        # 优先设置为当前翻译接口模型，如果没有则使用配置中的模型
+        if current_translation_model:
+            index = self.ai_model_combo.combo_box.findText(current_translation_model)
+            if index >= 0:
+                self.ai_model_combo.set_current_index(index)
+        else:
+            ai_model = config.get("ai_model_for_comparison", "gpt-3.5-turbo")
+            index = self.ai_model_combo.combo_box.findText(ai_model)
+            if index >= 0:
+                self.ai_model_combo.set_current_index(index)
+        
         self.ai_model_combo.combo_box.currentTextChanged.connect(self.save_current_config)
         controls_layout.addWidget(self.ai_model_combo)
 
@@ -522,6 +593,8 @@ class TranslationAPIDebugPage(QFrame, Base):
             self.container.addWidget(self.settings_scroll)
         elif page_key == "test":
             self.container.addWidget(self.test_widget)
+            # 切换到翻译测试页面时，刷新AI模型选择
+            self.update_ai_model_combo()
         
         self.current_page = page_key
 
@@ -537,7 +610,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             "tencent_api_enabled": self.tencent_enabled_switch.is_checked() if hasattr(self, 'tencent_enabled_switch') else False,
             "tencent_secret_id": self.tencent_secret_id_card.get_text() if hasattr(self, 'tencent_secret_id_card') else "",
             "tencent_secret_key": self.tencent_secret_key_card.get_text() if hasattr(self, 'tencent_secret_key_card') else "",
-            "ai_model_for_comparison": self.ai_model_combo.combo_box.currentText() if hasattr(self, 'ai_model_combo') else "gpt-3.5-turbo",
+            "ai_model_for_comparison": self.ai_model_combo.combo_box.currentText() if hasattr(self, 'ai_model_combo') and self.ai_model_combo.combo_box.currentText() != self.tra("暂无测试通过的模型") else "gpt-3.5-turbo",
             "source_language": self.source_lang_map.get(self.source_lang_combo.combo_box.currentText(), "auto") if hasattr(self, 'source_lang_combo') else "auto",
             "target_language": self.target_lang_map.get(self.target_lang_combo.combo_box.currentText(), "zh-cn") if hasattr(self, 'target_lang_combo') else "zh-cn"
         }
@@ -691,6 +764,30 @@ class TranslationAPIDebugPage(QFrame, Base):
             
         except Exception as e:
             print(f"交换语言时出错: {e}")
+    
+    def get_current_translation_model(self):
+        """获取当前接口管理中设置的翻译接口模型"""
+        try:
+            # 导入必要的模块
+            from ModuleFolders.TaskConfig.TaskConfig import TaskConfig
+            
+            # 加载配置
+            config = TaskConfig()
+            config.initialize()
+            
+            # 获取翻译接口设置
+            translate_platform = config.api_settings.get("translate")
+            if translate_platform and translate_platform in config.platforms:
+                platform_config = config.platforms[translate_platform]
+                model = platform_config.get("model", "")
+                if model:
+                    return model
+            
+            return None
+            
+        except Exception as e:
+            print(f"获取当前翻译模型时出错: {e}")
+            return None
     
     def get_tested_success_models(self):
         """获取测试通过的AI模型列表"""
