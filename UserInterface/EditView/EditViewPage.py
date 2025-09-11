@@ -764,11 +764,56 @@ class EditViewPage(Base,QFrame):
 
     # 底部命令栏返回按钮事件
     def on_back_button_clicked(self):
-
+        """返回按钮点击事件，清除当前项目并返回启动页面"""
         if Base.work_status == Base.STATUS.IDLE:
-            # 如果当前工作状态为空闲，则直接切换到启动页面
+            # 清除当前项目数据
+            self.clear_current_project()
+            # 切换到启动页面
             self.top_stacked_widget.setCurrentIndex(0)
             return
+    
+    def clear_current_project(self):
+        """清除当前项目的所有数据和界面状态"""
+        try:
+            # 使用CacheManager的清除方法
+            if hasattr(self, 'cache_manager'):
+                self.cache_manager.clear_project()
+            
+            # 清除导航卡片的树状视图
+            if hasattr(self.nav_card, 'tree'):
+                self.nav_card.tree.clear()
+            
+            # 清除所有打开的标签页
+            if hasattr(self.page_card, 'tab_bar') and hasattr(self.page_card, 'stacked_widget'):
+                # 移除所有标签页
+                while self.page_card.tab_bar.count() > 0:
+                    self.page_card.tab_bar.removeTab(0)
+                
+                # 清除堆叠控件中的所有页面
+                while self.page_card.stacked_widget.count() > 0:
+                    widget = self.page_card.stacked_widget.widget(0)
+                    self.page_card.stacked_widget.removeWidget(widget)
+                    if widget:
+                        widget.deleteLater()
+            
+            # 重置底部命令栏状态
+            if hasattr(self.bottom_bar_main, 'project_name'):
+                self.bottom_bar_main.project_name.setText('project_name')
+            if hasattr(self.bottom_bar_main, 'progress_bar'):
+                self.bottom_bar_main.progress_bar.setValue(0)
+            if hasattr(self.bottom_bar_main, 'progress_status'):
+                self.bottom_bar_main.progress_status.setText('NA')
+            
+            # 禁用继续按钮
+            self.bottom_bar_main.enable_continue_button(False)
+            
+            # 隐藏启动页面的继续按钮
+            self.startup_page.show_continue_button(False)
+            
+            self.info("项目已清除，返回启动页面")
+            
+        except Exception as e:
+            self.error("清除项目时发生错误", e)
         
     # 展开按钮事件，展开或收起监控页面
     def toggle_page(self):

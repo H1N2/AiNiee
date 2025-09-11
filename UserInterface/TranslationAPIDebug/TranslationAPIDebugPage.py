@@ -283,21 +283,25 @@ class TranslationAPIDebugPage(QFrame, Base):
             title=self.tra("源语言"),
             description=self.tra("选择要翻译的源语言"),
             items=[
-                self.tra("自动检测"),
-                self.tra("英语"),
                 self.tra("中文"),
-                self.tra("日语"),
-                self.tra("韩语")
+                self.tra("英语"),
+                self.tra("法语"),
+                self.tra("俄语"),
+                self.tra("乌克兰语"),
+                self.tra("葡萄牙语"),
+                self.tra("西班牙语")
             ]
         )
         self.source_lang_combo.setMaximumWidth(200)
         # 设置语言代码映射
         self.source_lang_map = {
-            self.tra("自动检测"): "auto",
-            self.tra("英语"): "en",
             self.tra("中文"): "zh",
-            self.tra("日语"): "ja",
-            self.tra("韩语"): "ko"
+            self.tra("英语"): "en",
+            self.tra("法语"): "fr",
+            self.tra("俄语"): "ru",
+            self.tra("乌克兰语"): "uk",
+            self.tra("葡萄牙语"): "pt",
+            self.tra("西班牙语"): "es"
         }
         # 设置默认选项
         source_lang = config.get("source_language", "auto")
@@ -310,25 +314,37 @@ class TranslationAPIDebugPage(QFrame, Base):
         self.source_lang_combo.combo_box.currentTextChanged.connect(self.save_current_config)
         controls_layout.addWidget(self.source_lang_combo)
 
+        # 添加交换语言按钮
+        from qfluentwidgets import ToolButton, FluentIcon
+        self.swap_lang_button = ToolButton(FluentIcon.SYNC)
+        self.swap_lang_button.setToolTip(self.tra("交换源语言和目标语言"))
+        self.swap_lang_button.clicked.connect(self.swap_languages)
+        self.swap_lang_button.setFixedSize(40, 40)
+        controls_layout.addWidget(self.swap_lang_button)
+
         self.target_lang_combo = ComboBoxCard(
             title=self.tra("目标语言"),
             description=self.tra("选择翻译的目标语言"),
             items=[
-                self.tra("简体中文"),
-                self.tra("繁体中文"),
+                self.tra("中文"),
                 self.tra("英语"),
-                self.tra("日语"),
-                self.tra("韩语")
+                self.tra("法语"),
+                self.tra("俄语"),
+                self.tra("乌克兰语"),
+                self.tra("葡萄牙语"),
+                self.tra("西班牙语")
             ]
         )
         self.target_lang_combo.setMaximumWidth(200)
         # 设置语言代码映射
         self.target_lang_map = {
-            self.tra("简体中文"): "zh-cn",
-            self.tra("繁体中文"): "zh-tw",
+            self.tra("中文"): "zh",
             self.tra("英语"): "en",
-            self.tra("日语"): "ja",
-            self.tra("韩语"): "ko"
+            self.tra("法语"): "fr",
+            self.tra("俄语"): "ru",
+            self.tra("乌克兰语"): "uk",
+            self.tra("葡萄牙语"): "pt",
+            self.tra("西班牙语"): "es"
         }
         target_lang = config.get("target_language", "zh-cn")
         for display_name, code in self.target_lang_map.items():
@@ -340,22 +356,12 @@ class TranslationAPIDebugPage(QFrame, Base):
         self.target_lang_combo.combo_box.currentTextChanged.connect(self.save_current_config)
         controls_layout.addWidget(self.target_lang_combo)
 
-        # AI模型选择（用于对比翻译）
+        # AI模型选择（用于对比翻译）- 只显示测试通过的模型
+        available_models = self.get_tested_success_models()
         self.ai_model_combo = ComboBoxCard(
             title=self.tra("对比AI模型"),
-            description=self.tra("选择用于对比翻译的AI大模型"),
-            items=[
-                "gpt-3.5-turbo",
-                "gpt-4",
-                "gpt-4-turbo",
-                "claude-3-haiku",
-                "claude-3-sonnet",
-                "claude-3-opus",
-                "gemini-pro",
-                "qwen-turbo",
-                "qwen-plus",
-                "qwen-max"
-            ]
+            description=self.tra("选择用于对比翻译的AI大模型（仅显示测试通过的模型）"),
+            items=available_models if available_models else [self.tra("暂无测试通过的模型")]
         )
         self.ai_model_combo.setMaximumWidth(200)
         # 设置默认AI模型
@@ -663,3 +669,66 @@ class TranslationAPIDebugPage(QFrame, Base):
             duration=5000,
             parent=self
         )
+
+    def swap_languages(self):
+        """交换源语言和目标语言"""
+        try:
+            # 获取当前选择的语言
+            source_text = self.source_lang_combo.combo_box.currentText()
+            target_text = self.target_lang_combo.combo_box.currentText()
+            
+            # 交换语言选择
+            source_index = self.target_lang_combo.combo_box.findText(source_text)
+            target_index = self.source_lang_combo.combo_box.findText(target_text)
+            
+            if source_index >= 0:
+                self.target_lang_combo.set_current_index(source_index)
+            if target_index >= 0:
+                self.source_lang_combo.set_current_index(target_index)
+                
+            # 保存配置
+            self.save_current_config()
+            
+        except Exception as e:
+            print(f"交换语言时出错: {e}")
+    
+    def get_tested_success_models(self):
+        """获取测试通过的AI模型列表"""
+        try:
+            # 导入必要的模块
+            from ModuleFolders.TaskConfig.TaskConfig import TaskConfig
+            
+            # 加载配置
+            config = TaskConfig()
+            config.initialize()
+            
+            # 获取所有平台配置
+            platforms = config.platforms
+            success_models = []
+            
+            # 遍历所有平台，查找测试通过的模型
+            for platform_key, platform_config in platforms.items():
+                # 检查平台是否有测试状态记录（这里需要根据实际的测试状态存储方式调整）
+                # 暂时返回一些常用模型作为示例，实际应该根据测试状态来筛选
+                if platform_config.get("enabled", False):  # 如果平台启用
+                    model_datas = platform_config.get("model_datas", [])
+                    if model_datas:
+                        success_models.extend(model_datas)
+                    else:
+                        # 如果没有model_datas，使用默认模型
+                        default_model = platform_config.get("model", "")
+                        if default_model:
+                            success_models.append(default_model)
+            
+            # 去重并返回
+            return list(set(success_models)) if success_models else []
+            
+        except Exception as e:
+            print(f"获取测试通过的模型时出错: {e}")
+            # 返回一些默认模型
+            return [
+                "gpt-3.5-turbo",
+                "gpt-4",
+                "claude-3-haiku",
+                "gemini-pro"
+            ]

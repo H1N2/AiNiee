@@ -8,6 +8,7 @@ from qfluentwidgets import (
 
 from Base.Base import Base
 from ModuleFolders.TaskConfig.TaskConfig import TaskConfig
+from ModuleFolders.TaskConfig.TaskType import TaskType
 from ModuleFolders.LLMRequester.LLMRequester import LLMRequester
 from ModuleFolders.PromptBuilder.PromptBuilder import PromptBuilder
 from ModuleFolders.ResponseExtractor.ResponseExtractor import ResponseExtractor
@@ -26,19 +27,23 @@ class SentenceTranslationWorker(QThread):
         self.text = text
         self.source_lang = source_lang
         self.target_lang = target_lang
+        # 使用独立的缓存管理器，避免与项目统计数据混合
         self.cache_manager = CacheManager()
+        # 确保不加载项目数据，只用于临时缓存翻译结果
+        self.cache_manager.project = None
         self.request_limiter = RequestLimiter()
+        # 设置合理的默认限制（TPM: 60000, RPM: 60）
+        self.request_limiter.set_limit(60000, 60)
         
         # 语言映射字典
         self.lang_mapping = {
             "中文": "Chinese",
-            "英文": "English", 
-            "日文": "Japanese",
-            "韩文": "Korean",
-            "法文": "French",
-            "德文": "German",
-            "西班牙文": "Spanish",
-            "俄文": "Russian"
+            "英语": "English", 
+            "法语": "French",
+            "俄语": "Russian",
+            "乌克兰语": "Ukrainian",
+            "葡萄牙语": "Portuguese",
+            "西班牙语": "Spanish"
         }
         
     def run(self):
@@ -46,23 +51,18 @@ class SentenceTranslationWorker(QThread):
         try:
             self.progress.emit("正在初始化翻译配置...")
             
-            # 检查缓存
-            cache_key = f"{self.source_lang}_{self.target_lang}_{hash(self.text)}"
-            cached_result = self.cache_manager.get_cache(cache_key)
+            # 检查缓存（使用独立的缓存键，避免与项目缓存冲突）
+            cache_key = f"sentence_{self.source_lang}_{self.target_lang}_{hash(self.text)}"
+            cached_result = self.cache_manager.get_cache(cache_key) if self.cache_manager else None
             if cached_result:
                 self.progress.emit("从缓存中获取翻译结果...")
                 self.translation_completed.emit(cached_result)
                 return
             
-            # 请求限制检查
-            if not self.request_limiter.can_make_request():
-                self.translation_error.emit("请求过于频繁，请稍后再试")
-                return
-            
             # 加载配置
             config = TaskConfig()
-            config.load_config()
-            config.prepare_for_translation("TRANSLATION")
+            config.initialize()
+            config.prepare_for_translation(TaskType.TRANSLATION)
             
             self.progress.emit("正在构建翻译请求...")
             
@@ -91,24 +91,51 @@ class SentenceTranslationWorker(QThread):
                 {"role": "user", "content": self.text}
             ]
             
+            # 计算实际的token数量
+            request_tokens = self.request_limiter.calculate_tokens(messages, enhanced_prompt or system_prompt)
+            
+            self.progress.emit("正在检查token限制...")
+            
+            # 检查token限制
+            if not self.request_limiter.check_limiter(request_tokens):
+                # 如果token数量超过最大限制，给出更具体的错误信息
+                if request_tokens >= self.request_limiter.max_tokens:
+                    self.translation_error.emit(f"该次任务的文本总tokens量({request_tokens})已经超过最大输入限制({self.request_limiter.max_tokens} tokens)，请减少输入文本长度")
+                else:
+                    self.translation_error.emit("当前token余量不足或请求过于频繁，请稍后再试")
+                return
+            
             self.progress.emit("正在发送翻译请求...")
             
-            # 发送请求
-            requester = LLMRequester(config)
-            response = requester.send_request(messages)
+            # 获取接口配置信息包
+            platform_config = config.get_platform_configuration("translationReq")
             
-            if response and response.get('choices'):
-                # 使用ResponseExtractor提取和处理响应
+            # 发送请求
+            requester = LLMRequester()
+            skip, response_think, response_content, prompt_tokens, completion_tokens = requester.sent_request(
+                messages,
+                system_prompt,
+                platform_config
+            )
+            
+            # 检查请求是否失败
+            if skip:
+                self.translation_error.emit("翻译请求失败，网络或API密钥错误")
+                return
+            
+            # 使用ResponseExtractor提取和处理响应
+            if response_content:
                 try:
                     extractor = ResponseExtractor(config)
-                    translated_text = extractor.extract_translation_result(response)
+                    translated_text = extractor.extract_translation_result(response_content)
                 except:
                     # 如果ResponseExtractor失败，使用简单提取
-                    translated_text = response['choices'][0]['message']['content'].strip()
+                    translated_text = response_content.strip()
                 
                 if translated_text:
-                    # 缓存结果
-                    self.cache_manager.set_cache(cache_key, translated_text)
+                    # 缓存结果（使用独立的缓存管理器）
+                    if self.cache_manager:
+                        self.cache_manager.set_cache(cache_key, translated_text)
                     self.translation_completed.emit(translated_text)
                 else:
                     self.translation_error.emit("翻译结果提取失败")
@@ -131,6 +158,9 @@ class SentenceTranslationPage(ScrollArea, Base):
         
         # 翻译工作线程
         self.translation_worker = None
+        
+        # 更新当前AI模型显示
+        self.update_current_model_display()
         
     def init_ui(self):
         """初始化用户界面"""
@@ -155,14 +185,26 @@ class SentenceTranslationPage(ScrollArea, Base):
         lang_title = StrongBodyLabel(self.tra("语言设置："))
         lang_layout.addWidget(lang_title)
         
+        # 当前AI模型显示
+        model_info_layout = QHBoxLayout()
+        model_info_layout.addWidget(BodyLabel(self.tra("当前AI模型：")))
+        self.current_model_label = BodyLabel(self.tra("未设置"))
+        self.current_model_label.setStyleSheet("color: #0078d4; font-weight: bold;")
+        model_info_layout.addWidget(self.current_model_label)
+        model_info_layout.addStretch()
+        lang_layout.addLayout(model_info_layout)
+        
         # 语言选择区域
         lang_selection_layout = QHBoxLayout()
+        
+        # 定义支持的语言列表
+        supported_languages = ["中文", "英语", "法语", "俄语", "乌克兰语", "葡萄牙语", "西班牙语"]
         
         # 源语言选择
         lang_selection_layout.addWidget(BodyLabel(self.tra("源语言:")))
         self.source_lang_combo = ComboBox()
-        self.source_lang_combo.addItems(["中文", "英文", "日文", "韩文", "法文", "德文", "西班牙文", "俄文"])
-        self.source_lang_combo.setCurrentText("日文")
+        self.source_lang_combo.addItems(supported_languages)
+        self.source_lang_combo.setCurrentText("中文")
         lang_selection_layout.addWidget(self.source_lang_combo)
         
         lang_selection_layout.addWidget(BodyLabel("→"))
@@ -170,9 +212,14 @@ class SentenceTranslationPage(ScrollArea, Base):
         # 目标语言选择
         lang_selection_layout.addWidget(BodyLabel(self.tra("目标语言:")))
         self.target_lang_combo = ComboBox()
-        self.target_lang_combo.addItems(["中文", "英文", "日文", "韩文", "法文", "德文", "西班牙文", "俄文"])
-        self.target_lang_combo.setCurrentText("中文")
+        self.target_lang_combo.addItems(supported_languages)
+        self.target_lang_combo.setCurrentText("英语")
         lang_selection_layout.addWidget(self.target_lang_combo)
+        
+        # 交换语言按钮
+        self.swap_lang_btn = PushButton(FluentIcon.SYNC, "交换")
+        self.swap_lang_btn.clicked.connect(self.swap_languages)
+        lang_selection_layout.addWidget(self.swap_lang_btn)
         
         lang_selection_layout.addStretch()
         lang_layout.addLayout(lang_selection_layout)
@@ -275,6 +322,9 @@ class SentenceTranslationPage(ScrollArea, Base):
         # 清空输出区域
         self.output_text.clear()
         
+        # 更新当前AI模型显示
+        self.update_current_model_display()
+        
         # 创建并启动翻译工作线程
         self.translation_worker = SentenceTranslationWorker(source_text, source_lang, target_lang)
         self.translation_worker.translation_completed.connect(self.on_translation_completed)
@@ -284,7 +334,13 @@ class SentenceTranslationPage(ScrollArea, Base):
         
     def on_translation_completed(self, translated_text):
         """翻译完成回调"""
-        self.output_text.setPlainText(translated_text)
+        # 计算输出文本长度
+        text_length = len(translated_text)
+        
+        # 在翻译结果前添加长度信息
+        result_with_info = f"输出长度：{text_length} 字符\n\n{translated_text}"
+        
+        self.output_text.setPlainText(result_with_info)
         self.translate_button.setEnabled(True)
         self.translate_button.setText(self.tra("开始翻译"))
         self.progress_bar.setVisible(False)
@@ -306,3 +362,37 @@ class SentenceTranslationPage(ScrollArea, Base):
         """清空输入和输出内容"""
         self.input_text.clear()
         self.output_text.clear()
+        
+    def swap_languages(self):
+        """交换源语言和目标语言"""
+        source_lang = self.source_lang_combo.currentText()
+        target_lang = self.target_lang_combo.currentText()
+        
+        self.source_lang_combo.setCurrentText(target_lang)
+        self.target_lang_combo.setCurrentText(source_lang)
+    
+    def update_current_model_display(self):
+        """更新当前AI模型显示"""
+        try:
+            # 加载配置
+            config = TaskConfig()
+            config.initialize()
+            
+            # 获取翻译接口配置
+            platform_config = config.get_platform_configuration("translationReq")
+            
+            # 获取模型名称
+            model_name = platform_config.get("model_name", "未设置")
+            target_platform = platform_config.get("target_platform", "未知平台")
+            
+            # 更新显示
+            if model_name and model_name != "未设置":
+                display_text = f"{target_platform} - {model_name}"
+            else:
+                display_text = "未设置"
+                
+            self.current_model_label.setText(display_text)
+            
+        except Exception as e:
+            self.current_model_label.setText("获取失败")
+            self.error(f"获取AI模型信息失败: {e}")

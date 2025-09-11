@@ -550,4 +550,23 @@ class CacheManager(Base):
                 oldest_key = next(iter(self.translation_cache))
                 del self.translation_cache[oldest_key]
             self.translation_cache[cache_key] = translation
+    
+    def clear_project(self) -> None:
+        """清除当前项目的所有数据"""
+        with self.file_lock:
+            try:
+                # 清除项目数据
+                self.project = None
+                
+                # 清除翻译缓存
+                self.translation_cache.clear()
+                
+                # 重置保存相关标志
+                self.save_to_file_require_flag = False
+                self.save_to_file_require_path = ""
+                
+                self.info("项目数据已清除")
+                
+            except Exception as e:
+                self.error("清除项目数据时发生错误", e)
 

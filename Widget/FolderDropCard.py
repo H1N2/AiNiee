@@ -131,9 +131,12 @@ class DragDropArea(Base,QWidget):
         self.satr_button.clicked.connect(self._get_folder)
         self.selectButton = PrimaryPushButton(FluentIcon.FOLDER_ADD, self.tra("拖拽/选择输入文件夹"), self)
         self.selectButton.clicked.connect(self._select_folder)
+        self.clearButton = PrimaryPushButton(FluentIcon.DELETE, self.tra("清除路径"), self)
+        self.clearButton.clicked.connect(self._clear_path)
         bottom_layout.addStretch(1)
         bottom_layout.addWidget(self.satr_button)
         bottom_layout.addWidget(self.selectButton)
+        bottom_layout.addWidget(self.clearButton)
         bottom_layout.addStretch(1)
 
         # 路径显示区域
@@ -159,13 +162,21 @@ class DragDropArea(Base,QWidget):
         folder_path = QFileDialog.getExistingDirectory(self, self.tra("选择文件夹"))
         if folder_path:
             self.update_path(folder_path)
+    
+    def _clear_path(self):
+        """清除当前路径"""
+        self.update_path("")
 
     def update_path(self, path: str, emit_signal: bool = True): 
         self.current_path = path
-        display_path = path if len(path) < 50 else f"...{path[-47:]}"
-        info = self.tra("当前路径")
-        self.pathLabel.setText(f"{info}: {display_path}")
-        self.pathLabel.setToolTip(path)
+        if path:
+            display_path = path if len(path) < 50 else f"...{path[-47:]}"
+            info = self.tra("当前路径")
+            self.pathLabel.setText(f"{info}: {display_path}")
+            self.pathLabel.setToolTip(path)
+        else:
+            self.pathLabel.setText(self.tra("未选择路径"))
+            self.pathLabel.setToolTip("")
         if emit_signal: # 只有在需要时才发射信号
             self.pathDropped.emit(path)
 
