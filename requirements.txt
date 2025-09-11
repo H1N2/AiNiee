@@ -26,7 +26,7 @@ tqdm
 jaconv
 python-rapidjson
 protobuf==4.25.7
-# èŽ·å–isoè¯­è¨€ä»£ç å¯¹åº”çš„å‹å¥½åç§°
+# »ñÈ¡isoÓïÑÔ´úÂë¶ÔÓ¦µÄÓÑºÃÃû³Æ
 language-data
 langcodes
 msgspec
@@ -44,9 +44,9 @@ matplotlib
 sounddevice>=0.4.4
 
 # BabelDOC
-# onnx æ–°ç‰ˆæœ¬æ‰“åŒ…åŽä¸èƒ½è¿è¡Œï¼Œè¿™é‡Œä½¿ç”¨ onnx==1.16.1 onnxruntime==1.20.1
-# rapidocr-onnxruntime ä¾èµ–äº† opencv-pythonï¼Œæ‰€ä»¥åŽ»é™¤äº† opencv-python-headless
-# ä¸ä½¿ç”¨ babeldoc.document_il.midend.detect_scanned_file.DetectScannedFile æ‰€ä»¥åŽ»é™¤ scikit-image>=0.25.2
+# onnx ÐÂ°æ±¾´ò°üºó²»ÄÜÔËÐÐ£¬ÕâÀïÊ¹ÓÃ onnx==1.16.1 onnxruntime==1.20.1
+# rapidocr-onnxruntime ÒÀÀµÁË opencv-python£¬ËùÒÔÈ¥³ýÁË opencv-python-headless
+# ²»Ê¹ÓÃ babeldoc.document_il.midend.detect_scanned_file.DetectScannedFile ËùÒÔÈ¥³ý scikit-image>=0.25.2
 bitstring>=4.3.0
 configargparse>=1.7
 httpx[socks]>=0.27.0
@@ -74,3 +74,4 @@ rapidocr-onnxruntime>=1.4.4
 pyzstd
 rtree
 scikit-learn>=1.7.1
+qcloud-python-sts
