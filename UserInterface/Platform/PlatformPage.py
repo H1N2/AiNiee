@@ -28,6 +28,7 @@ class DraggableAPIButton(DropDownPushButton):
         super().__init__(*args, **kwargs)
         
         self.api_tag = api_tag  # 存储接口的唯一标识
+        self.original_text = self.text()  # 保存原始文本
         self.test_status = None  # 测试状态: None(未测试), True(成功), False(失败)
         self.update_test_status_display()
     
@@ -42,41 +43,28 @@ class DraggableAPIButton(DropDownPushButton):
     def update_test_status_display(self):
         """更新测试状态显示"""
         if self.test_status is True:
-            # 测试成功 - 绿色勾号
+            # 测试成功 - 绿色边框和勾号
+            self.setText(f"{self.original_text} ✓")
             self.setStyleSheet("""
                 DraggableAPIButton {
                     border: 2px solid #28a745;
                     border-radius: 4px;
-                }
-                DraggableAPIButton::after {
-                    content: "✓";
                     color: #28a745;
-                    font-weight: bold;
-                    position: absolute;
-                    top: 2px;
-                    right: 4px;
-                    font-size: 10px;
                 }
             """)
         elif self.test_status is False:
-            # 测试失败 - 红色叉号
+            # 测试失败 - 红色边框和叉号
+            self.setText(f"{self.original_text} ✗")
             self.setStyleSheet("""
                 DraggableAPIButton {
                     border: 2px solid #dc3545;
                     border-radius: 4px;
-                }
-                DraggableAPIButton::after {
-                    content: "✗";
                     color: #dc3545;
-                    font-weight: bold;
-                    position: absolute;
-                    top: 2px;
-                    right: 4px;
-                    font-size: 10px;
                 }
             """)
         else:
             # 未测试 - 默认样式
+            self.setText(self.original_text)
             self.setStyleSheet("")
 
     # 鼠标左键按下事件
