@@ -378,18 +378,21 @@ class SentenceTranslationPage(ScrollArea, Base):
             config = TaskConfig()
             config.initialize()
             
-            # 获取翻译接口配置
-            platform_config = config.get_platform_configuration("translationReq")
+            # 获取翻译平台设置
+            target_platform = config.api_settings.get("translate")
+            if not target_platform:
+                self.current_model_label.setText("未设置翻译平台")
+                return
             
-            # 获取模型名称
-            model_name = platform_config.get("model_name", "未设置")
-            target_platform = platform_config.get("target_platform", "未知平台")
+            # 直接从platforms配置中获取模型信息
+            platform_config = config.platforms.get(target_platform, {})
+            model_name = platform_config.get("model", "未设置")
             
             # 更新显示
             if model_name and model_name != "未设置":
                 display_text = f"{target_platform} - {model_name}"
             else:
-                display_text = "未设置"
+                display_text = "未设置模型"
                 
             self.current_model_label.setText(display_text)
             
