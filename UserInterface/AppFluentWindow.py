@@ -52,6 +52,7 @@ from UserInterface.TranslationAPIDebug.TranslationAPIDebugPage import Translatio
 from UserInterface.Extraction_Tool.Export_Source_Text import Widget_export_source_text
 from UserInterface.Extraction_Tool.Import_Translated_Text import Widget_import_translated_text
 from UserInterface.Extraction_Tool.Export_Update_Text import Widget_update_text
+from UserInterface.SentenceTranslation.SentenceTranslationPage import SentenceTranslationPage
 
 
 
@@ -298,7 +299,11 @@ class AppFluentWindow(FluentWindow, Base): #主窗口
         self.addSubInterface(self.platform_page, FluentIcon.IOT, self.tra("接口管理"), NavigationItemPosition.SCROLL)
 
         self.edit_view_page = EditViewPage("edit_view_page", self, plugin_manager, cache_manager, file_reader)
-        self.addSubInterface(self.edit_view_page, FluentIcon.PLAY, self.tra("开始翻译"), NavigationItemPosition.SCROLL)  
+        self.addSubInterface(self.edit_view_page, FluentIcon.PLAY, self.tra("文件翻译"), NavigationItemPosition.SCROLL)
+        
+        # 添加独立的语句翻译页面
+        self.sentence_translation_page = SentenceTranslationPage("sentence_translation_page", self)
+        self.addSubInterface(self.sentence_translation_page, FluentIcon.CHAT, self.tra("语句翻译"), NavigationItemPosition.SCROLL)  
 
 
     # 添加项目设置
