@@ -45,14 +45,16 @@ def create_httpx_client(
     # 添加代理配置
     if proxy:
         if isinstance(proxy, str):
-            # 字符串格式代理，同时设置HTTP和HTTPS
-            client_kwargs["proxy"] = {
-                "http://": proxy,
-                "https://": proxy
-            }
-        elif isinstance(proxy, dict):
-            # 字典格式代理，支持更细粒度配置
+            # 字符串格式代理，直接使用
             client_kwargs["proxy"] = proxy
+        elif isinstance(proxy, dict):
+            # 字典格式代理，提取URL字符串
+            if "http" in proxy:
+                client_kwargs["proxy"] = proxy["http"]
+            elif "https" in proxy:
+                client_kwargs["proxy"] = proxy["https"]
+            elif "url" in proxy:
+                client_kwargs["proxy"] = proxy["url"]
     
     return httpx.Client(**client_kwargs)
 
