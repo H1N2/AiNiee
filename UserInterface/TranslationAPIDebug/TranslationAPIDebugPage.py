@@ -110,23 +110,23 @@ class TranslationAPIDebugPage(QFrame, Base):
         test_layout.addWidget(HorizontalSeparator())
         self.add_results_section(test_layout)
 
-        # 添加标签页
-        self.pivot.addItem(
-            routeKey="settings",
-            text=self.tra("API设置"),
-            onClick=lambda: self.switch_to_page("settings")
-        )
-        
+        # 添加标签页（翻译测试在前，API设置在后）
         self.pivot.addItem(
             routeKey="test",
             text=self.tra("翻译测试"),
             onClick=lambda: self.switch_to_page("test")
         )
+        
+        self.pivot.addItem(
+            routeKey="settings",
+            text=self.tra("API设置"),
+            onClick=lambda: self.switch_to_page("settings")
+        )
 
-        # 默认显示设置页面
-        self.container.addWidget(self.settings_scroll)
-        self.pivot.setCurrentItem("settings")
-        self.current_page = "settings"
+        # 默认显示翻译测试页面
+        self.container.addWidget(self.test_widget)
+        self.pivot.setCurrentItem("test")
+        self.current_page = "test"
 
     def add_api_settings_section(self, container, config):
         """添加API设置区域"""
@@ -340,6 +340,32 @@ class TranslationAPIDebugPage(QFrame, Base):
         self.target_lang_combo.combo_box.currentTextChanged.connect(self.save_current_config)
         controls_layout.addWidget(self.target_lang_combo)
 
+        # AI模型选择（用于对比翻译）
+        self.ai_model_combo = ComboBoxCard(
+            title=self.tra("对比AI模型"),
+            description=self.tra("选择用于对比翻译的AI大模型"),
+            items=[
+                "gpt-3.5-turbo",
+                "gpt-4",
+                "gpt-4-turbo",
+                "claude-3-haiku",
+                "claude-3-sonnet",
+                "claude-3-opus",
+                "gemini-pro",
+                "qwen-turbo",
+                "qwen-plus",
+                "qwen-max"
+            ]
+        )
+        self.ai_model_combo.setMaximumWidth(200)
+        # 设置默认AI模型
+        ai_model = config.get("ai_model_for_comparison", "gpt-3.5-turbo")
+        index = self.ai_model_combo.combo_box.findText(ai_model)
+        if index >= 0:
+            self.ai_model_combo.set_current_index(index)
+        self.ai_model_combo.combo_box.currentTextChanged.connect(self.save_current_config)
+        controls_layout.addWidget(self.ai_model_combo)
+
         # 测试按钮
         self.test_button = PillPushButton(self.tra("开始翻译测试"))
         self.test_button.clicked.connect(self.start_translation_test)
@@ -500,8 +526,9 @@ class TranslationAPIDebugPage(QFrame, Base):
             "tencent_api_enabled": self.tencent_enabled_switch.is_checked() if hasattr(self, 'tencent_enabled_switch') else False,
             "tencent_secret_id": self.tencent_secret_id_card.get_text() if hasattr(self, 'tencent_secret_id_card') else "",
             "tencent_secret_key": self.tencent_secret_key_card.get_text() if hasattr(self, 'tencent_secret_key_card') else "",
-            "source_language": self.source_lang_map.get(self.source_lang_combo.get_current_text(), "auto") if hasattr(self, 'source_lang_combo') else "auto",
-            "target_language": self.target_lang_map.get(self.target_lang_combo.get_current_text(), "zh-cn") if hasattr(self, 'target_lang_combo') else "zh-cn"
+            "ai_model_for_comparison": self.ai_model_combo.combo_box.currentText() if hasattr(self, 'ai_model_combo') else "gpt-3.5-turbo",
+            "source_language": self.source_lang_map.get(self.source_lang_combo.combo_box.currentText(), "auto") if hasattr(self, 'source_lang_combo') else "auto",
+            "target_language": self.target_lang_map.get(self.target_lang_combo.combo_box.currentText(), "zh-cn") if hasattr(self, 'target_lang_combo') else "zh-cn"
         }
         
         # 合并默认配置
