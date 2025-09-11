@@ -27,6 +27,9 @@ class CacheManager(Base):
 
         # 线程锁
         self.file_lock = threading.Lock()
+        
+        # 简单的翻译缓存字典
+        self.translation_cache = {}
 
         # 注册事件
         self.subscribe(Base.EVENT.TASK_START, self.start_interval_saving)
@@ -531,4 +534,20 @@ class CacheManager(Base):
                             "file_path": file_path
                         })
         return all_items_data
+    
+    # 简单翻译缓存方法
+    def get_cache(self, cache_key: str) -> str:
+        """获取翻译缓存"""
+        with self.file_lock:
+            return self.translation_cache.get(cache_key)
+    
+    def set_cache(self, cache_key: str, translation: str) -> None:
+        """设置翻译缓存"""
+        with self.file_lock:
+            # 限制缓存大小，避免内存过度使用
+            if len(self.translation_cache) >= 1000:
+                # 清理最旧的缓存项
+                oldest_key = next(iter(self.translation_cache))
+                del self.translation_cache[oldest_key]
+            self.translation_cache[cache_key] = translation
 
