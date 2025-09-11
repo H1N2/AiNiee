@@ -136,6 +136,11 @@ class TaskExecutor(Base):
                 target = self.polish_start_target,
                 args = (continue_status,),
             ).start()
+        
+        # 语句翻译和段落翻译由对话框直接处理，不需要在这里处理
+        elif current_mode in (TaskType.SENTENCE_TRANSLATION, TaskType.PARAGRAPH_TRANSLATION):
+            # 这些模式由对话框直接处理，不需要启动后台任务
+            return
 
         else:
             self.print("")

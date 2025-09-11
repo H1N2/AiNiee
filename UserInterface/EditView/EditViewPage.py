@@ -23,6 +23,7 @@ from UserInterface.EditView.TextViewPage import TextViewPage
 from UserInterface.EditView.BasicTablePage import BasicTablePage
 from UserInterface.EditView.Term.TermResultPage import TermResultPage
 from UserInterface.EditView.Term.TermExtractionDialog import TermExtractionDialog
+from UserInterface.EditView.TextTranslationDialog import TextTranslationDialog
 
 # 底部命令栏
 class BottomCommandBar(Base,CardWidget):
@@ -73,8 +74,12 @@ class BottomCommandBar(Base,CardWidget):
         # 创建翻译和润色的下拉菜单
         self.menu = RoundMenu(parent=self)
         self.translate_action = Action(FIF.PLAY, self.tra('开始翻译'))
+        self.sentence_translate_action = Action(FIF.EDIT, self.tra('语句翻译'))
+        self.paragraph_translate_action = Action(FIF.DOCUMENT, self.tra('段落翻译'))
         self.polish_action = Action(FIF.ALBUM, self.tra('开始润色'))
         self.menu.addAction(self.translate_action)
+        self.menu.addAction(self.sentence_translate_action)
+        self.menu.addAction(self.paragraph_translate_action)
         self.menu.addAction(self.polish_action)
 
         # 初始按钮
@@ -118,6 +123,12 @@ class BottomCommandBar(Base,CardWidget):
         self.translate_action.triggered.connect(
             lambda: self._on_mode_selected(TaskType.TRANSLATION, self.translate_action)
         )
+        self.sentence_translate_action.triggered.connect(
+            lambda: self._on_mode_selected(TaskType.SENTENCE_TRANSLATION, self.sentence_translate_action)
+        )
+        self.paragraph_translate_action.triggered.connect(
+            lambda: self._on_mode_selected(TaskType.PARAGRAPH_TRANSLATION, self.paragraph_translate_action)
+        )
         self.polish_action.triggered.connect(
             lambda: self._on_mode_selected(TaskType.POLISH, self.polish_action)
         )
@@ -137,6 +148,12 @@ class BottomCommandBar(Base,CardWidget):
         self.start_btn.setText(action.text())
         if self.current_mode == TaskType.TRANSLATION:
             info_cont = ": " + self.tra("翻译模式")
+            self.info_toast(self.tra("模式已切换为"), info_cont)
+        elif self.current_mode == TaskType.SENTENCE_TRANSLATION:
+            info_cont = ": " + self.tra("语句翻译模式")
+            self.info_toast(self.tra("模式已切换为"), info_cont)
+        elif self.current_mode == TaskType.PARAGRAPH_TRANSLATION:
+            info_cont = ": " + self.tra("段落翻译模式")
             self.info_toast(self.tra("模式已切换为"), info_cont)
         elif self.current_mode == TaskType.POLISH:
             info_cont = ": " + self.tra("润色模式")
@@ -188,6 +205,16 @@ class BottomCommandBar(Base,CardWidget):
     def command_play(self) -> None:
         """开始新任务"""
         self.cancel_scheduled_task() # 如果有定时任务，先取消
+
+        # 如果是语句翻译或段落翻译，打开对应的对话框
+        if self.current_mode == TaskType.SENTENCE_TRANSLATION:
+            dialog = TextTranslationDialog('sentence', self.window())
+            dialog.exec()
+            return
+        elif self.current_mode == TaskType.PARAGRAPH_TRANSLATION:
+            dialog = TextTranslationDialog('paragraph', self.window())
+            dialog.exec()
+            return
 
         if self.continue_btn.isEnabled():
             info_cont1 = self.tra("将重置尚未完成的任务") + "  ... ？"
