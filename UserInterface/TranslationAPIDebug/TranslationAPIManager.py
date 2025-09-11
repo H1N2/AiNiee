@@ -125,9 +125,73 @@ class TranslationAPIManager:
             return {"success": False, "error": "响应JSON解析失败"}
         except Exception as e:
             return {"success": False, "error": f"未知错误: {str(e)}"}
+    
+    def _test_volcano_api_legacy(self, access_key, secret_key, text, source_lang, target_lang):
+        """使用旧版火山引擎SDK的备选方法"""
+        try:
+            from volcengine.ApiInfo import ApiInfo
+            from volcengine.Credentials import Credentials
+            from volcengine.ServiceInfo import ServiceInfo
+            from volcengine.base.Service import Service
+            
+            # 创建服务配置
+            service_info = ServiceInfo(
+                'translate.volcengineapi.com',
+                {"Content-Type": "application/json"},
+                Credentials(access_key, secret_key, 'translate', 'cn-north-1'),
+                5,
+                5
+            )
+            
+            # 创建API信息
+            k_query = {
+                'Action': 'TranslateText',
+                'Version': '2020-06-01'
+            }
+            k_api_info = {
+                'translate': ApiInfo('POST', '/', k_query, {}, {})
+            }
+            
+            # 创建服务实例
+            service = Service(service_info, k_api_info)
+            
+            # 语言代码转换
+            source_language = self._convert_lang_code_for_volcano(source_lang)
+            target_language = self._convert_lang_code_for_volcano(target_lang)
+            
+            # 构建请求体
+            body = {
+                "SourceLanguage": source_language,
+                "TargetLanguage": target_language,
+                "TextList": [text]
+            }
+            
+            # 调用API
+            response = service.json('translate', {}, json.dumps(body))
+            response_data = json.loads(response)
+            
+            # 检查响应格式
+            if isinstance(response_data, str):
+                return {"success": False, "error": f"API返回错误: {response_data}"}
+            
+            if not isinstance(response_data, dict):
+                return {"success": False, "error": f"API返回格式错误: {response_data}"}
+            
+            if "TranslationList" not in response_data or not response_data["TranslationList"]:
+                error_msg = response_data.get('Message', '未知错误')
+                return {"success": False, "error": f"翻译失败: {error_msg}"}
+            
+            # 提取翻译结果
+            translation = response_data["TranslationList"][0]["Translation"]
+            return {"success": True, "translation": translation}
+            
+        except ImportError:
+            return {"success": False, "error": "火山引擎SDK未安装。请运行: pip install volcengine 或 pip install volcengine-python-sdk"}
+        except Exception as e:
+            return {"success": False, "error": f"旧版SDK调用失败: {str(e)}"}
 
     def test_volcano_api(self, text, source_lang, target_lang):
-        """测试火山翻译API（使用SDK方式）"""
+        """测试火山翻译API（使用新版SDK）"""
         try:
             # 获取API密钥配置
             api_key = self.config.get("volcano_api_key", "")
@@ -150,66 +214,50 @@ class TranslationAPIManager:
             else:
                 return {"success": False, "error": "火山API配置不完整。请提供volcano_api_key（格式：access_key:secret_key）或分别提供access_key和secret_key"}
 
-            # 尝试使用正确的火山引擎SDK
+            # 尝试使用新版火山引擎SDK（参考ok_test_volcaon.py）
             try:
-                from volcengine.ApiInfo import ApiInfo
-                from volcengine.Credentials import Credentials
-                from volcengine.ServiceInfo import ServiceInfo
-                from volcengine.base.Service import Service
+                import volcenginesdkcore
+                import volcenginesdktranslate20250301
+                from volcenginesdkcore.rest import ApiException
                 
-                # 创建服务配置
-                service_info = ServiceInfo(
-                    'translate.volcengineapi.com',
-                    {"Content-Type": "application/json"},
-                    Credentials(access_key, secret_key, 'translate', 'cn-north-1'),
-                    5,
-                    5
-                )
+                # 创建配置
+                configuration = volcenginesdkcore.Configuration()
+                configuration.ak = access_key
+                configuration.sk = secret_key
+                configuration.region = "cn-beijing"
                 
-                # 创建API信息
-                k_query = {
-                    'Action': 'TranslateText',
-                    'Version': '2020-06-01'
-                }
-                k_api_info = {
-                    'translate': ApiInfo('POST', '/', k_query, {}, {})
-                }
+                # 设置默认配置
+                volcenginesdkcore.Configuration.set_default(configuration)
                 
-                # 创建服务实例
-                service = Service(service_info, k_api_info)
+                # 创建API实例
+                api_instance = volcenginesdktranslate20250301.TRANSLATE20250301Api()
                 
                 # 语言代码转换
                 source_language = self._convert_lang_code_for_volcano(source_lang)
                 target_language = self._convert_lang_code_for_volcano(target_lang)
                 
-                # 构建请求体
-                body = {
-                    "SourceLanguage": source_language,
-                    "TargetLanguage": target_language,
-                    "TextList": [text]
-                }
+                # 创建翻译请求
+                translate_text_request = volcenginesdktranslate20250301.TranslateTextRequest(
+                    target_language=target_language,
+                    source_language=source_language,
+                    text_list=[text]
+                )
                 
                 # 调用API
-                response = service.json('translate', {}, json.dumps(body))
-                response_data = json.loads(response)
+                response = api_instance.translate_text(translate_text_request)
                 
-                # 检查响应格式
-                if isinstance(response_data, str):
-                    return {"success": False, "error": f"API返回错误: {response_data}"}
-                
-                if not isinstance(response_data, dict):
-                    return {"success": False, "error": f"API返回格式错误: {response_data}"}
-                
-                if "TranslationList" not in response_data or not response_data["TranslationList"]:
-                    error_msg = response_data.get('Message', '未知错误')
-                    return {"success": False, "error": f"翻译失败: {error_msg}"}
-                
-                # 提取翻译结果
-                translation = response_data["TranslationList"][0]["Translation"]
-                return {"success": True, "translation": translation}
-                
-            except ImportError:
-                return {"success": False, "error": "火山引擎SDK未安装。请运行: pip install volcengine"}
+                # 检查响应
+                if hasattr(response, 'translation_list') and response.translation_list:
+                    translation = response.translation_list[0].translation
+                    return {"success": True, "translation": translation}
+                else:
+                    return {"success": False, "error": "翻译响应格式异常"}
+                    
+            except ImportError as import_error:
+                # 如果新版SDK不可用，尝试使用旧版SDK
+                return self._test_volcano_api_legacy(access_key, secret_key, text, source_lang, target_lang)
+            except ApiException as api_error:
+                return {"success": False, "error": f"API调用异常: {str(api_error)}"}
             except Exception as sdk_error:
                 return {"success": False, "error": f"SDK调用失败: {str(sdk_error)}"}
 
