@@ -88,7 +88,7 @@ class ProxySettingsPage(QFrame, Base):
         """
         添加代理启用开关
         """
-        def checked_changed(checked: bool) -> None:
+        def checked_changed(widget, checked: bool) -> None:
             config = self.load_config()
             config["proxy_enable"] = checked
             self.save_config(config)
@@ -149,7 +149,7 @@ class ProxySettingsPage(QFrame, Base):
         添加代理认证设置
         """
         # 认证启用开关
-        def auth_checked_changed(checked: bool) -> None:
+        def auth_checked_changed(widget, checked: bool) -> None:
             config = self.load_config()
             config["proxy_auth_enable"] = checked
             self.save_config(config)
