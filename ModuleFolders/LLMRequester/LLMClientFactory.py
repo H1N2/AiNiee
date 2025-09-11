@@ -46,13 +46,13 @@ def create_httpx_client(
     if proxy:
         if isinstance(proxy, str):
             # 字符串格式代理，同时设置HTTP和HTTPS
-            client_kwargs["proxies"] = {
+            client_kwargs["proxy"] = {
                 "http://": proxy,
                 "https://": proxy
             }
         elif isinstance(proxy, dict):
             # 字典格式代理，支持更细粒度配置
-            client_kwargs["proxies"] = proxy
+            client_kwargs["proxy"] = proxy
     
     return httpx.Client(**client_kwargs)
 

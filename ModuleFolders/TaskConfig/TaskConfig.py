@@ -246,6 +246,8 @@ class TaskConfig(Base):
             "thinking_budget": thinking_budget,
             "proxy": proxy_config
         }
+        
+        return params
     
     def _get_proxy_for_platform(self, target_platform):
         """
@@ -270,9 +272,6 @@ class TaskConfig(Base):
                 return proxy_url
                 
         return None
-
-
-        return params
 
 
 
