@@ -40,7 +40,7 @@ class PushButtonCard(CardWidget):
             init(self)
 
         if clicked:
-            self.push_button.clicked.connect(lambda value: clicked(self))
+            self.push_button.clicked.connect(lambda: clicked())
 
         if drop_callback:
             self.setAcceptDrops(True)
