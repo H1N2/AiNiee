@@ -1,11 +1,20 @@
 import hashlib
 import hmac
-import json
-import time
-import uuid
 import requests
-from datetime import datetime
+import hashlib
+import hmac
+import time
+import json
+import uuid
 from urllib.parse import quote
+import sys
+import os
+
+# 添加项目根目录到路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from ModuleFolders.LLMRequester.LLMRequester import LLMRequester
+from ModuleFolders.TaskConfig.TaskConfig import TaskConfig
+from ModuleFolders.TaskConfig.TaskType import TaskType
 
 
 class TranslationAPIManager:
@@ -498,7 +507,12 @@ class TranslationAPIManager:
             if len(successful_translations) < 2:
                 return "需要至少两个成功的翻译结果才能进行对比"
 
-            # 构建对比分析
+            # 尝试使用AI模型进行深度分析
+            ai_analysis = self._get_ai_quality_analysis(original_text, successful_translations)
+            if ai_analysis:
+                return ai_analysis
+
+            # 如果AI分析失败，回退到基础指标分析
             analysis = f"原文：{original_text}\n\n翻译结果对比分析：\n\n"
 
             # 简单的质量分析（基于长度、字符多样性等基础指标）
@@ -527,7 +541,7 @@ class TranslationAPIManager:
             best_api = max(successful_translations.keys(),
                           key=lambda k: len(successful_translations[k]['translation']))
             analysis += f"推荐：{best_api} 的翻译结果相对较好\n"
-            analysis += "\n注意：这是基于基础指标的简单分析。要获得更准确的质量评估，建议配置AI模型进行深度分析。"
+            analysis += "\n注意：这是基于基础指标的简单分析。AI深度分析功能当前不可用。"
 
             return analysis
 
@@ -572,3 +586,59 @@ class TranslationAPIManager:
             "ko": "ko"
         }
         return lang_map.get(lang_code, "auto")
+
+    def _get_ai_quality_analysis(self, original_text, translation_results):
+         """使用AI模型进行翻译质量分析"""
+         try:
+             # 检查是否有可用的AI配置
+             config = TaskConfig()
+             config.initialize()
+             
+             # 检查是否配置了翻译接口
+             if not hasattr(config, 'api_settings') or not config.api_settings.get('translate'):
+                 return None
+                 
+             # 准备翻译配置
+             config.prepare_for_translation(TaskType.TRANSLATION)
+             
+             # 构建AI分析提示
+             prompt = f"""请分析以下翻译结果的质量，从准确性、流畅性、自然度等方面进行评价：
+
+原文：{original_text}
+
+翻译结果：
+"""
+             
+             for api_name, result in translation_results.items():
+                 if result.get("success", False):
+                     prompt += f"{api_name}：{result['translation']}\n"
+             
+             prompt += "\n请为每个翻译结果打分（1-10分）并说明理由，最后推荐最佳翻译。"
+             
+             # 构建消息列表
+             messages = [
+                 {
+                     "role": "user",
+                     "content": prompt
+                 }
+             ]
+             
+             # 获取平台配置
+             platform_config = config.get_platform_configuration("translationReq")
+             
+             # 使用LLMRequester进行分析
+             llm_requester = LLMRequester()
+             skip, response_think, response_content, prompt_tokens, completion_tokens = llm_requester.sent_request(
+                 messages=messages,
+                 system_prompt="你是一个专业的翻译质量评估专家，请客观公正地分析翻译质量。",
+                 platform_config=platform_config
+             )
+             
+             if not skip and response_content:
+                 return f"AI质量分析：\n{response_content}"
+             else:
+                 return None
+                 
+         except Exception as e:
+             # 如果AI分析失败，返回None让调用者使用备用方法
+             return None
