@@ -29,8 +29,6 @@ class AppSettingsPage(QWidget, Base):
 
         # 默认配置
         self.default = {
-            "proxy_url": "",
-            "proxy_enable": False,
             "font_hinting": True,
             "scale_factor": "AUTO",
             "interface_language_setting": "简中",
@@ -60,7 +58,6 @@ class AppSettingsPage(QWidget, Base):
         self.scroller.setWidget(self.vbox_parent)
 
         # 添加控件
-        self.add_widget_proxy(self.vbox, config)
         self.add_widget_font_hinting(self.vbox, config)
         self.add_widget_auto_check_update(self.vbox, config) # 使用子线程进行更新检查
         self.add_widget_debug_mode(self.vbox, config)
@@ -72,66 +69,7 @@ class AppSettingsPage(QWidget, Base):
         # 填充
         self.vbox.addStretch(1)
 
-    # 网络代理地址
-    def add_widget_proxy(self, parent, config) -> None:
 
-        def checked_changed(swicth_button, checked: bool) -> None:
-            swicth_button.setChecked(checked)
-
-            config = self.load_config()
-            config["proxy_enable"] = checked
-            self.save_config(config)
-
-            # 获取并设置网络代理
-            proxy_url = config["proxy_url"]
-            if checked == False or proxy_url == "":
-                os.environ.pop("http_proxy", None)
-                os.environ.pop("https_proxy", None)
-                info = self.tra("网络代理已关闭")
-                self.info(info)
-            else:
-                os.environ["http_proxy"] = proxy_url
-                os.environ["https_proxy"] = proxy_url
-                info = self.tra("网络代理已启用，代理地址")
-                self.info(f"{info}：{proxy_url}")
-
-        def init(widget) -> None:
-            widget.set_text(config.get("proxy_url"))
-            widget.set_placeholder_text(self.tra("请输入网络代理地址"))
-
-            swicth_button = SwitchButton()
-            swicth_button.setOnText(self.tra("启用"))
-            swicth_button.setOffText(self.tra("禁用"))
-            swicth_button.setChecked(config.get("proxy_enable", False))
-            swicth_button.checkedChanged.connect(lambda checked: checked_changed(swicth_button, checked))
-            widget.add_spacing(8)
-            widget.add_widget(swicth_button)
-
-            # 获取并设置网络代理
-            checked = config["proxy_enable"]
-            proxy_url = config["proxy_url"]
-            if checked == False or proxy_url == "":
-                os.environ.pop("http_proxy", None)
-                os.environ.pop("https_proxy", None)
-            else:
-                os.environ["http_proxy"] = proxy_url
-                os.environ["https_proxy"] = proxy_url
-                info = self.tra("网络代理已启用，代理地址")
-                self.info(f"{info}：{proxy_url}")
-
-        def text_changed(widget, text: str) -> None:
-            config = self.load_config()
-            config["proxy_url"] = text.strip()
-            self.save_config(config)
-
-        parent.addWidget(
-            LineEditCard(
-                self.tra("网络代理地址"),
-                self.tra("启用该功能后，将使用设置的代理地址向接口发送请求，例如 http://127.0.0.1:7890"),
-                init = init,
-                text_changed = text_changed,
-            )
-        )
 
     # 应用字体优化
     def add_widget_font_hinting(self, parent, config) -> None:

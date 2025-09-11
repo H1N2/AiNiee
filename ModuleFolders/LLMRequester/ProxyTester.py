@@ -41,16 +41,10 @@ class ProxyTester(Base):
         }
         
         try:
-            # 配置代理
-            proxies = {
-                "http://": proxy_url,
-                "https://": proxy_url
-            }
-            
             start_time = time.time()
             
             # 测试基本连接
-            with httpx.Client(proxies=proxies, timeout=timeout) as client:
+            with httpx.Client(proxy=proxy_url, timeout=timeout) as client:
                 # 测试IP获取
                 try:
                     response = client.get("https://httpbin.org/ip")
@@ -99,15 +93,9 @@ class ProxyTester(Base):
         }
         
         try:
-            # 配置代理
-            proxies = {
-                "http://": proxy_url,
-                "https://": proxy_url
-            }
-            
             start_time = time.time()
             
-            async with httpx.AsyncClient(proxies=proxies, timeout=timeout) as client:
+            async with httpx.AsyncClient(proxy=proxy_url, timeout=timeout) as client:
                 # 测试IP获取
                 try:
                     response = await client.get("https://httpbin.org/ip")
