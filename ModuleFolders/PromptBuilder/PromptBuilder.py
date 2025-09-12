@@ -860,3 +860,72 @@ class PromptBuilder(Base):
 
         return messages, system, extra_log
 
+    def build_translation_prompt(self, source_text: str, source_lang: str, target_lang: str, translation_type: str = 'sentence') -> str:
+        """
+        构建翻译提示词，支持术语表应用
+        
+        Args:
+            source_text (str): 源文本
+            source_lang (str): 源语言
+            target_lang (str): 目标语言
+            translation_type (str): 翻译类型，默认为'sentence'
+            
+        Returns:
+            str: 构建的提示词
+        """
+        try:
+            # 获取配置
+            config = self.config if hasattr(self, 'config') else None
+            if not config:
+                # 如果没有配置，返回基础提示词
+                return f"You are a professional translator. Translate the following text from {source_lang} to {target_lang}. Only return the translation, no explanations."
+            
+            # 构建基础系统提示词
+            system_prompt = PromptBuilder.build_system(config, source_lang)
+            
+            # 如果启用术语表，添加术语表内容
+            if config.prompt_dictionary_switch and config.prompt_dictionary_data:
+                # 创建包含源文本的字典，用于术语表筛选
+                source_text_dict = {"0": source_text}
+                glossary = PromptBuilder.build_glossary_prompt(config, source_text_dict)
+                if glossary:
+                    system_prompt += glossary
+            
+            # 如果启用禁翻表，添加禁翻表内容
+            if config.exclusion_list_switch:
+                source_text_dict = {"0": source_text}
+                ntl = PromptBuilder.build_ntl_prompt(config, source_text_dict)
+                if ntl:
+                    system_prompt += ntl
+            
+            # 如果启用角色介绍，添加角色介绍内容
+            if config.characterization_switch:
+                source_text_dict = {"0": source_text}
+                characterization = PromptBuilder.build_characterization(config, source_text_dict)
+                if characterization:
+                    system_prompt += characterization
+            
+            # 如果启用世界观设定，添加世界观内容
+            if config.world_building_switch:
+                world_building = PromptBuilder.build_world_building(config)
+                if world_building:
+                    system_prompt += world_building
+            
+            # 如果启用行文措辞要求，添加行文措辞内容
+            if config.writing_style_switch:
+                writing_style = PromptBuilder.build_writing_style(config)
+                if writing_style:
+                    system_prompt += writing_style
+            
+            # 如果启用翻译风格示例，添加翻译示例内容
+            if config.translation_example_switch:
+                translation_example = PromptBuilder.build_translation_example(config)
+                if translation_example:
+                    system_prompt += translation_example
+            
+            return system_prompt
+            
+        except Exception as e:
+            # 如果出现异常，返回基础提示词
+            return f"You are a professional translator. Translate the following text from {source_lang} to {target_lang}. Only return the translation, no explanations."
+

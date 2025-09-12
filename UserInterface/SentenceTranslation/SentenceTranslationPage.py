@@ -75,14 +75,16 @@ class SentenceTranslationWorker(QThread):
             
             # 使用PromptBuilder构建更完整的提示词
             try:
-                prompt_builder = PromptBuilder(config)
+                prompt_builder = PromptBuilder()
+                prompt_builder.config = config  # 设置配置
                 enhanced_prompt = prompt_builder.build_translation_prompt(
                     source_text=self.text,
                     source_lang=source_language,
                     target_lang=target_language,
                     translation_type='sentence'
                 )
-            except:
+            except Exception as e:
+                self.progress.emit(f"构建提示词时出现错误: {str(e)}")
                 enhanced_prompt = None
             
             # 构建消息
