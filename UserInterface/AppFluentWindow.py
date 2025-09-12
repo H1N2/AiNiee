@@ -304,7 +304,11 @@ class AppFluentWindow(FluentWindow, Base): #主窗口
         
         # 添加独立的语句翻译页面
         self.sentence_translation_page = SentenceTranslationPage("sentence_translation_page", self)
-        self.addSubInterface(self.sentence_translation_page, FluentIcon.CHAT, self.tra("语句翻译"), NavigationItemPosition.SCROLL)  
+        self.addSubInterface(self.sentence_translation_page, FluentIcon.CHAT, self.tra("语句翻译"), NavigationItemPosition.SCROLL)
+        
+        # 添加平台翻译页面
+        self.translation_api_debug_page = TranslationAPIDebugPage("translation_api_debug_page", self)
+        self.addSubInterface(self.translation_api_debug_page, FluentIcon.CODE, self.tra("平台翻译"), NavigationItemPosition.SCROLL)
 
 
     # 添加项目设置
@@ -325,9 +329,7 @@ class AppFluentWindow(FluentWindow, Base): #主窗口
         self.plugins_settings_page = PluginsSettingsPage("plugins_settings_page", self, plugin_manager)
         self.addSubInterface(self.plugins_settings_page, FluentIcon.APPLICATION, self.tra("插件设置"), NavigationItemPosition.SCROLL)
 
-        self.translation_api_debug_page = TranslationAPIDebugPage("translation_api_debug_page", self)
-        self.addSubInterface(self.translation_api_debug_page, FluentIcon.CODE, self.tra("翻译API调试"), NavigationItemPosition.SCROLL)
-        
+
         self.proxy_settings_page = ProxySettingsPage("proxy_settings_page", self)
         self.addSubInterface(self.proxy_settings_page, FluentIcon.GLOBE, self.tra("网络代理设置"), NavigationItemPosition.SCROLL)
 
