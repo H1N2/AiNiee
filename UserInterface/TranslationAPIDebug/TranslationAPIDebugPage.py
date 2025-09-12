@@ -68,8 +68,8 @@ class TranslationAPIDebugPage(QFrame, Base):
             "tencent_secret_id": "",
             "tencent_secret_key": "",
             "ai_model_for_comparison": "gpt-3.5-turbo",
-            "source_language": "auto",
-            "target_language": "zh-cn"
+            "source_language": "zh",
+            "target_language": "zh"
         }
 
         # 载入配置
@@ -362,7 +362,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             self.tra("西班牙语"): "es"
         }
         # 设置默认选项
-        source_lang = config.get("source_language", "zh-cn")
+        source_lang = config.get("source_language", "auto")
         for display_name, code in self.source_lang_map.items():
             if code == source_lang:
                 index = self.source_lang_combo.combo_box.findText(display_name)
@@ -404,7 +404,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             self.tra("葡萄牙语"): "pt",
             self.tra("西班牙语"): "es"
         }
-        target_lang = config.get("target_language", "en")
+        target_lang = config.get("target_language", "zh-cn")
         for display_name, code in self.target_lang_map.items():
             if code == target_lang:
                 index = self.target_lang_combo.combo_box.findText(display_name)
@@ -460,7 +460,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             title=self.tra("测试文本"),
             content=self.tra("请输入要进行翻译测试的文本")
         )
-        self.test_text_edit.setValue("如果你不开心，那么，能变得开心的唯一办法是开心地坐直身体，并装作很开心的样子说话及行动。如果你的行为散发的是快乐，就不可能在心理上保持忧郁。这点小小的基本真理可以为我们的人生带来奇迹。")
+        self.test_text_edit.setValue("Hello, this is a test text for translation API debugging.")
         test_layout.addWidget(self.test_text_edit)
 
         container.addWidget(test_group)
@@ -499,6 +499,10 @@ class TranslationAPIDebugPage(QFrame, Base):
             )
             return
 
+        # 记录开始时间
+        import time
+        self.test_start_time = time.time()
+
         # 更新API管理器配置
         config = {
             "baidu_api_enabled": self.baidu_enabled_switch.is_checked(),
@@ -527,8 +531,8 @@ class TranslationAPIDebugPage(QFrame, Base):
         self.test_thread = TranslationTestThread(
             self.api_manager,
             test_text,
-            self.source_lang_map.get(self.source_lang_combo.get_current_text(), "auto"),
-            self.target_lang_map.get(self.target_lang_combo.get_current_text(), "zh-cn")
+            self.source_lang_map.get(self.source_lang_combo.get_current_text(), "zh"),
+            self.target_lang_map.get(self.target_lang_combo.get_current_text(), "zh")
         )
         self.test_thread.test_completed.connect(self.on_test_completed)
         self.test_thread.test_error.connect(self.on_test_error)
@@ -536,11 +540,20 @@ class TranslationAPIDebugPage(QFrame, Base):
 
     def on_test_completed(self, results):
         """测试完成回调"""
+        # 计算耗时
+        import time
+        if hasattr(self, 'test_start_time'):
+            elapsed_time = time.time() - self.test_start_time
+            time_str = f"{elapsed_time:.2f}秒"
+        else:
+            time_str = "未知"
+        
         self.test_button.setEnabled(True)
         self.test_button.setText(self.tra("开始翻译测试"))
 
         # 显示结果 - 使用markdown格式
         result_markdown = f"# {self.tra('翻译结果对比')}\n\n"
+        result_markdown += f"⏱️ **{self.tra('测试用时')}**: {time_str}\n\n"
         
         for api_name, result in results.items():
             # 检查result是否为字典类型
@@ -565,7 +578,7 @@ class TranslationAPIDebugPage(QFrame, Base):
 
         InfoBar.success(
             title=self.tra("成功"),
-            content=self.tra("翻译测试完成"),
+            content=self.tra(f"翻译测试完成，用时 {time_str}"),
             orient=Qt.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,
@@ -575,6 +588,14 @@ class TranslationAPIDebugPage(QFrame, Base):
 
     def on_test_error(self, error_msg):
         """测试错误回调"""
+        # 计算耗时
+        import time
+        if hasattr(self, 'test_start_time'):
+            elapsed_time = time.time() - self.test_start_time
+            time_str = f"{elapsed_time:.2f}秒"
+        else:
+            time_str = "未知"
+            
         self.test_button.setEnabled(True)
         self.test_button.setText(self.tra("开始翻译测试"))
 
