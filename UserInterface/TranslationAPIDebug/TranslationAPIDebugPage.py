@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QGroupBox, QScrollArea
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QGroupBox, QScrollArea, QTextBrowser
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer
 from qfluentwidgets import HorizontalSeparator, PillPushButton, MessageBox, InfoBar, InfoBarPosition, Pivot, qrouter, PushButton, FluentIcon
 
@@ -470,9 +470,12 @@ class TranslationAPIDebugPage(QFrame, Base):
         results_group = QGroupBox(self.tra("翻译结果对比"))
         results_layout = QVBoxLayout(results_group)
 
-        self.results_text_edit = QTextEdit()
+        # 使用QTextBrowser支持markdown渲染
+        self.results_text_edit = QTextBrowser()
         self.results_text_edit.setReadOnly(True)
         self.results_text_edit.setMinimumHeight(300)
+        # 启用markdown支持
+        self.results_text_edit.setMarkdown("")
         results_layout.addWidget(self.results_text_edit)
 
         container.addWidget(results_group)
@@ -532,25 +535,29 @@ class TranslationAPIDebugPage(QFrame, Base):
         self.test_button.setEnabled(True)
         self.test_button.setText(self.tra("开始翻译测试"))
 
-        # 显示结果
-        result_text = self.tra("翻译结果对比：\n\n")
+        # 显示结果 - 使用markdown格式
+        result_markdown = f"# {self.tra('翻译结果对比')}\n\n"
         
         for api_name, result in results.items():
             # 检查result是否为字典类型
             if isinstance(result, dict):
                 if result.get("success", False):
-                    result_text += f"{api_name}:\n{result.get('translation', 'N/A')}\n\n"
+                    result_markdown += f"## 🟢 {api_name}\n\n"
+                    result_markdown += f"```\n{result.get('translation', 'N/A')}\n```\n\n"
                 else:
-                    result_text += f"{api_name}: {self.tra('翻译失败')} - {result.get('error', '未知错误')}\n\n"
+                    result_markdown += f"## 🔴 {api_name}\n\n"
+                    result_markdown += f"**{self.tra('翻译失败')}**: `{result.get('error', '未知错误')}`\n\n"
             else:
                 # 如果result不是字典，可能是字符串错误信息
-                result_text += f"{api_name}: {self.tra('翻译失败')} - {str(result)}\n\n"
+                result_markdown += f"## 🔴 {api_name}\n\n"
+                result_markdown += f"**{self.tra('翻译失败')}**: `{str(result)}`\n\n"
 
         # 如果有AI质量评估结果
         if "ai_comparison" in results:
-            result_text += f"\n{self.tra('AI质量评估')}:\n{results['ai_comparison']}\n"
+            result_markdown += f"\n## 🤖 {self.tra('AI质量评估')}\n\n"
+            result_markdown += f"```\n{results['ai_comparison']}\n```\n"
 
-        self.results_text_edit.setPlainText(result_text)
+        self.results_text_edit.setMarkdown(result_markdown)
 
         InfoBar.success(
             title=self.tra("成功"),
