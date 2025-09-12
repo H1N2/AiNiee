@@ -362,7 +362,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             self.tra("西班牙语"): "es"
         }
         # 设置默认选项
-        source_lang = config.get("source_language", "auto")
+        source_lang = config.get("source_language", "zh-cn")
         for display_name, code in self.source_lang_map.items():
             if code == source_lang:
                 index = self.source_lang_combo.combo_box.findText(display_name)
@@ -404,7 +404,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             self.tra("葡萄牙语"): "pt",
             self.tra("西班牙语"): "es"
         }
-        target_lang = config.get("target_language", "zh-cn")
+        target_lang = config.get("target_language", "en")
         for display_name, code in self.target_lang_map.items():
             if code == target_lang:
                 index = self.target_lang_combo.combo_box.findText(display_name)
@@ -460,7 +460,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             title=self.tra("测试文本"),
             content=self.tra("请输入要进行翻译测试的文本")
         )
-        self.test_text_edit.setValue("Hello, this is a test text for translation API debugging.")
+        self.test_text_edit.setValue("如果你不开心，那么，能变得开心的唯一办法是开心地坐直身体，并装作很开心的样子说话及行动。如果你的行为散发的是快乐，就不可能在心理上保持忧郁。这点小小的基本真理可以为我们的人生带来奇迹。")
         test_layout.addWidget(self.test_text_edit)
 
         container.addWidget(test_group)

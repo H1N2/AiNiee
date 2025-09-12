@@ -595,7 +595,17 @@ class TranslationAPIManager:
              config.initialize()
              
              # 检查是否配置了翻译接口
-             if not hasattr(config, 'api_settings') or not config.api_settings.get('translate'):
+             if not hasattr(config, 'api_settings'):
+                 print("[DEBUG] TaskConfig没有api_settings属性")
+                 return None
+                 
+             translate_platform = config.api_settings.get('translate')
+             if not translate_platform:
+                 print("[DEBUG] 未配置翻译接口平台")
+                 return None
+                 
+             if not hasattr(config, 'platforms') or translate_platform not in config.platforms:
+                 print(f"[DEBUG] 翻译平台 {translate_platform} 不存在于platforms配置中")
                  return None
                  
              # 准备翻译配置
@@ -625,6 +635,7 @@ class TranslationAPIManager:
              
              # 获取平台配置
              platform_config = config.get_platform_configuration("translationReq")
+             print(f"[DEBUG] 平台配置获取成功: {platform_config.get('target_platform', 'unknown')}")
              
              # 使用LLMRequester进行分析
              llm_requester = LLMRequester()
@@ -634,11 +645,17 @@ class TranslationAPIManager:
                  platform_config=platform_config
              )
              
+             print(f"[DEBUG] LLM请求结果: skip={skip}, response_content存在={bool(response_content)}")
+             
              if not skip and response_content:
                  return f"AI质量分析：\n{response_content}"
              else:
+                 print(f"[DEBUG] AI分析失败: skip={skip}, response_content={response_content}")
                  return None
                  
          except Exception as e:
-             # 如果AI分析失败，返回None让调用者使用备用方法
+             # 如果AI分析失败，返回详细错误信息用于调试
+             print(f"[DEBUG] AI质量分析异常: {str(e)}")
+             import traceback
+             traceback.print_exc()
              return None
