@@ -474,6 +474,10 @@ class TranslationAPIDebugPage(QFrame, Base):
         self.results_text_edit = QTextBrowser()
         self.results_text_edit.setReadOnly(True)
         self.results_text_edit.setMinimumHeight(300)
+        # 设置自动换行和滚动条策略
+        self.results_text_edit.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.results_text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.results_text_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         # 启用markdown支持
         self.results_text_edit.setMarkdown("")
         results_layout.addWidget(self.results_text_edit)
