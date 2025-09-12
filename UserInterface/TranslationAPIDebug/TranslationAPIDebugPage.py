@@ -69,7 +69,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             "tencent_secret_key": "",
             "ai_model_for_comparison": "gpt-3.5-turbo",
             "source_language": "zh",
-            "target_language": "zh"
+            "target_language": "en"
         }
 
         # 载入配置
@@ -362,7 +362,8 @@ class TranslationAPIDebugPage(QFrame, Base):
             self.tra("西班牙语"): "es"
         }
         # 设置默认选项
-        source_lang = config.get("source_language", "auto")
+        source_lang = config.get("source_language", "zh-cn")
+        print('source_lang' + source_lang)
         for display_name, code in self.source_lang_map.items():
             if code == source_lang:
                 index = self.source_lang_combo.combo_box.findText(display_name)
@@ -404,7 +405,8 @@ class TranslationAPIDebugPage(QFrame, Base):
             self.tra("葡萄牙语"): "pt",
             self.tra("西班牙语"): "es"
         }
-        target_lang = config.get("target_language", "zh-cn")
+        target_lang = config.get("target_language", "en")
+        print('target_lang' + target_lang)
         for display_name, code in self.target_lang_map.items():
             if code == target_lang:
                 index = self.target_lang_combo.combo_box.findText(display_name)
@@ -460,7 +462,7 @@ class TranslationAPIDebugPage(QFrame, Base):
             title=self.tra("测试文本"),
             content=self.tra("请输入要进行翻译测试的文本")
         )
-        self.test_text_edit.setValue("Hello, this is a test text for translation API debugging.")
+        self.test_text_edit.setValue("如果你不开心，那么，能变得开心的唯一办法是开心地坐直身体，并装作很开心的样子说话及行动。如果你的行为散发的是快乐，就不可能在心理上保持忧郁。这点小小的基本真理可以为我们的人生带来奇迹。")
         test_layout.addWidget(self.test_text_edit)
 
         container.addWidget(test_group)
@@ -553,9 +555,20 @@ class TranslationAPIDebugPage(QFrame, Base):
 
         # 显示结果 - 使用markdown格式
         result_markdown = f"# {self.tra('翻译结果对比')}\n\n"
-        result_markdown += f"⏱️ **{self.tra('测试用时')}**: {time_str}\n\n"
+        result_markdown += f"⏱️ **测试用时**: {time_str}\n\n"
+        
+        # 分离AI质量分析和翻译结果
+        ai_comparison_result = None
+        translation_results = {}
         
         for api_name, result in results.items():
+            if api_name == "ai_comparison":
+                ai_comparison_result = result
+            else:
+                translation_results[api_name] = result
+        
+        # 显示翻译结果
+        for api_name, result in translation_results.items():
             # 检查result是否为字典类型
             if isinstance(result, dict):
                 if result.get("success", False):
@@ -569,16 +582,16 @@ class TranslationAPIDebugPage(QFrame, Base):
                 result_markdown += f"## 🔴 {api_name}\n\n"
                 result_markdown += f"**{self.tra('翻译失败')}**: `{str(result)}`\n\n"
 
-        # 如果有AI质量评估结果
-        if "ai_comparison" in results:
+        # 如果有AI质量评估结果，只显示一次
+        if ai_comparison_result:
             result_markdown += f"\n## 🤖 {self.tra('AI质量评估')}\n\n"
-            result_markdown += f"```\n{results['ai_comparison']}\n```\n"
+            result_markdown += f"```\n{ai_comparison_result}\n```\n"
 
         self.results_text_edit.setMarkdown(result_markdown)
 
         InfoBar.success(
             title=self.tra("成功"),
-            content=self.tra(f"翻译测试完成，用时 {time_str}"),
+            content=f"翻译测试完成，用时 {time_str}",
             orient=Qt.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,
