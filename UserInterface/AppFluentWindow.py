@@ -300,15 +300,15 @@ class AppFluentWindow(FluentWindow, Base): #主窗口
         self.addSubInterface(self.platform_page, FluentIcon.IOT, self.tra("接口管理"), NavigationItemPosition.SCROLL)
 
         self.edit_view_page = EditViewPage("edit_view_page", self, plugin_manager, cache_manager, file_reader)
-        self.addSubInterface(self.edit_view_page, FluentIcon.PLAY, self.tra("文件翻译"), NavigationItemPosition.SCROLL)
+        self.addSubInterface(self.edit_view_page, FluentIcon.PLAY, self.tra("文件翻译-AI"), NavigationItemPosition.SCROLL)
         
         # 添加独立的语句翻译页面
         self.sentence_translation_page = SentenceTranslationPage("sentence_translation_page", self)
-        self.addSubInterface(self.sentence_translation_page, FluentIcon.CHAT, self.tra("语句翻译"), NavigationItemPosition.SCROLL)
+        self.addSubInterface(self.sentence_translation_page, FluentIcon.CHAT, self.tra("语句翻译-AI"), NavigationItemPosition.SCROLL)
         
         # 添加平台翻译页面
         self.translation_api_debug_page = TranslationAPIDebugPage("translation_api_debug_page", self)
-        self.addSubInterface(self.translation_api_debug_page, FluentIcon.CODE, self.tra("平台翻译"), NavigationItemPosition.SCROLL)
+        self.addSubInterface(self.translation_api_debug_page, FluentIcon.CODE, self.tra("语句翻译-平台"), NavigationItemPosition.SCROLL)
 
 
     # 添加项目设置

@@ -28,43 +28,6 @@ class DraggableAPIButton(DropDownPushButton):
         super().__init__(*args, **kwargs)
         
         self.api_tag = api_tag  # 存储接口的唯一标识
-        self.original_text = self.text()  # 保存原始文本
-        self.test_status = None  # 测试状态: None(未测试), True(成功), False(失败)
-        self.update_test_status_display()
-    
-    def set_test_status(self, status: bool = None):
-        """设置测试状态并更新显示
-        Args:
-            status: None(未测试), True(成功), False(失败)
-        """
-        self.test_status = status
-        self.update_test_status_display()
-    
-    def update_test_status_display(self):
-        """更新测试状态显示"""
-        if self.test_status is True:
-            # 测试成功 - 绿色边框，不修改文本避免与图标叠加
-            self.setStyleSheet("""
-                DraggableAPIButton {
-                    border: 2px solid #28a745;
-                    border-radius: 4px;
-                    color: #28a745;
-                    background-color: rgba(40, 167, 69, 0.1);
-                }
-            """)
-        elif self.test_status is False:
-            # 测试失败 - 红色边框，不修改文本避免与图标叠加
-            self.setStyleSheet("""
-                DraggableAPIButton {
-                    border: 2px solid #dc3545;
-                    border-radius: 4px;
-                    color: #dc3545;
-                    background-color: rgba(220, 53, 69, 0.1);
-                }
-            """)
-        else:
-            # 未测试 - 默认样式
-            self.setStyleSheet("")
 
     # 鼠标左键按下事件
     def mouseMoveEvent(self, e):
@@ -294,49 +257,13 @@ class PlatformPage(QFrame, Base):
     def api_test_done(self, event: int, data: dict):
         # 更新运行状态
         Base.work_status = Base.STATUS.IDLE
-        
-        # 更新接口按钮的测试状态显示
-        self.update_api_test_status(data.get("success", []), data.get("failure", []))
 
         if len(data.get("failure", [])) > 0:
-            success_count = len(data.get("success", []))
-            failure_count = len(data.get("failure", []))
-            info_cont = self.tra("接口测试结果：成功") + f"   {success_count}" + "......" + self.tra("失败") + f"{failure_count}" + "......"
+            info_cont = self.tra("接口测试结果：成功") + f"   {len(data.get('success', []))}"+ "......" + self.tra("失败") + f"{   len(data.get('failure', []))}" + "......"
             self.error_toast("", info_cont)
         else:
-            success_count = len(data.get("success", []))
-            failure_count = len(data.get("failure", []))
-            info_cont = self.tra("接口测试结果：成功") + f"   {success_count}" + "......" + self.tra("失败") + f"{failure_count}" + "......"
+            info_cont = self.tra("接口测试结果：成功") + f"   {len(data.get('success', []))}"+ "......" + self.tra("失败") + f"{   len(data.get('failure', []))}" + "......"
             self.success_toast("", info_cont)
-    
-    def update_api_test_status(self, success_apis: list, failure_apis: list):
-        """更新接口按钮的测试状态显示
-        Args:
-            success_apis: 测试成功的接口标签列表
-            failure_apis: 测试失败的接口标签列表
-        """
-        # 遍历页面中的所有API类型卡片
-        try:
-            # 查找页面中的所有APITypeCard控件
-            for widget in self.findChildren(APITypeCard):
-                self._update_buttons_in_card(widget, success_apis, failure_apis)
-        except Exception as e:
-            print(f"更新API测试状态时出错: {e}")
-    
-    def _update_buttons_in_card(self, card, success_apis: list, failure_apis: list):
-        """更新指定卡片中的按钮状态"""
-        # 获取卡片中的所有控件
-        for i in range(card.flow_layout.count()):
-            item = card.flow_layout.itemAt(i)
-            if item and item.widget():
-                widget = item.widget()
-                if isinstance(widget, DraggableAPIButton):
-                    api_tag = widget.api_tag
-                    if api_tag in success_apis:
-                        widget.set_test_status(True)
-                    elif api_tag in failure_apis:
-                        widget.set_test_status(False)
-                    # 如果不在任何列表中，保持当前状态不变
 
     # 加载并更新预设配置
     def load_preset(self):
