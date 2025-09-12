@@ -585,7 +585,14 @@ class TranslationAPIDebugPage(QFrame, Base):
         # 如果有AI质量评估结果，只显示一次
         if ai_comparison_result:
             result_markdown += f"\n## 🤖 {self.tra('AI质量评估')}\n\n"
-            result_markdown += f"```\n{ai_comparison_result}\n```\n"
+            # 检查AI分析结果是否已经包含markdown格式
+            if ai_comparison_result.startswith("AI质量分析："):
+                # 如果是AI生成的分析，去掉前缀并直接显示
+                clean_result = ai_comparison_result.replace("AI质量分析：\n", "")
+                result_markdown += f"{clean_result}\n"
+            else:
+                # 如果是基础分析或其他格式，保持代码块格式
+                result_markdown += f"```\n{ai_comparison_result}\n```\n"
 
         self.results_text_edit.setMarkdown(result_markdown)
 
