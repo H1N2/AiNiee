@@ -46,17 +46,27 @@ class TaskExecutor(Base):
                 # 注意：正在执行的任务无法通过这种方式取消，但可以设置停止标志
                 pass
                 
-            while True:
+            # 等待任务真正停止
+            timeout = 30  # 最多等待30秒
+            start_time = time.time()
+            while time.time() - start_time < timeout:
                 time.sleep(0.5)
                 if Base.work_status == Base.STATUS.TASKSTOPPED:
                     self.print("")
                     self.info("翻译任务已停止 ...")
                     self.print("")
                     self.emit(Base.EVENT.TASK_STOP_DONE, {})
-                    break
+                    return
+                    
+            # 超时处理
+            self.print("")
+            self.warning("翻译任务停止超时，强制重置状态 ...")
+            self.print("")
+            Base.work_status = Base.STATUS.TASKSTOPPED
+            self.emit(Base.EVENT.TASK_STOP_DONE, {})
 
         # 子线程循环检测停止状态
-        threading.Thread(target = target).start()
+        threading.Thread(target = target, daemon=True).start()
 
     # 任务开始事件
     def task_start(self, event: int, data: dict) -> None:
@@ -130,6 +140,10 @@ class TaskExecutor(Base):
                 # 循环次数比实际最大轮次要多一轮，当触发停止翻译的事件时，最后都会从这里退出任务
                 # 执行到这里说明停止任意的任务已经执行完毕，可以重置内部状态了
                 Base.work_status = Base.STATUS.TASKSTOPPED
+                self.print("")
+                self.info("翻译任务已停止 ...")
+                self.print("")
+                self.emit(Base.EVENT.TASK_STOP_DONE, {})
                 return None
 
             # 获取 待翻译 状态的条目数量
@@ -331,6 +345,10 @@ class TaskExecutor(Base):
                 # 循环次数比实际最大轮次要多一轮，当触发停止翻译的事件时，最后都会从这里退出任务
                 # 执行到这里说明停止任意的任务已经执行完毕，可以重置内部状态了
                 Base.work_status = Base.STATUS.TASKSTOPPED
+                self.print("")
+                self.info("润色任务已停止 ...")
+                self.print("")
+                self.emit(Base.EVENT.TASK_STOP_DONE, {})
                 return None
 
             # 根据润色模式，获取可润色的条目数量
