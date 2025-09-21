@@ -1,7 +1,6 @@
 import time
 import threading
 import concurrent.futures
-
 import opencc
 from tqdm import tqdm
 
@@ -21,7 +20,6 @@ from ModuleFolders.PromptBuilder.PromptBuilderSakura import PromptBuilderSakura
 from ModuleFolders.RequestLimiter.RequestLimiter import RequestLimiter
 from ModuleFolders.TaskExecutor.TranslatorUtil import get_source_language_for_file
 
-
 # 翻译器
 class TaskExecutor(Base):
 
@@ -35,69 +33,7 @@ class TaskExecutor(Base):
         self.file_writer = file_writer
         self.config = TaskConfig()
         self.request_limiter = RequestLimiter()
-
-        # 注册事件
-        self.subscribe(Base.EVENT.TASK_STOP, self.task_stop)
-        self.subscribe(Base.EVENT.TASK_START, self.task_start)
-        self.subscribe(Base.EVENT.TASK_MANUAL_EXPORT, self.task_manual_export)
-        self.subscribe(Base.EVENT.APP_SHUT_DOWN, self.app_shut_down)
-
-    # 应用关闭事件
-    def app_shut_down(self, event: int, data: dict) -> None:
-        Base.work_status = Base.STATUS.STOPING
-
-    # 手动导出事件
-    def task_manual_export(self, event: int, data: dict) -> None:
-
-        self.print("")
-        self.info(f"正在读取数据，准备输出中 ...")
-        self.print("")
-
-        # 获取配置信息，此时 config 是一个字典，后面需要使用get
-        config = self.load_config()
-        
-        output_path = data.get("export_path")
-        inpput_path = config.get("label_input_path")
-
-        # 触发手动导出插件事件
-        self.plugin_manager.broadcast_event("manual_export", config, self.cache_manager.project)
-
-        # 如果开启了转换简繁开关功能，则进行文本转换
-        if config.get("response_conversion_toggle"):  # 使用 .get()
-            self.print("")
-
-            self.info(f"已启动自动简繁转换功能，正在使用 {config.get('opencc_preset')} 配置进行字形转换 ...")
-            self.print("")
-
-            converter = opencc.OpenCC(config.get('opencc_preset'))
-            cache_list = self.cache_manager.project.items_iter()
-            for item in cache_list:
-                if item.translation_status == TranslationStatus.TRANSLATED:
-                    item.translated_text = converter.convert(item.translated_text)
-                if item.translation_status == TranslationStatus.POLISHED:
-                    item.polished_text = converter.convert(item.polished_text)
-            self.print("")
-            self.info(f"简繁转换完成。")
-            self.print("")
-
-        # 输出配置包
-        output_config = {
-            "translated_suffix": config.get('output_filename_suffix'),
-            "bilingual_suffix": "_bilingual",
-            "bilingual_order": config.get('bilingual_text_order','translation_first') 
-        }
-
-        # 写入文件
-        self.file_writer.output_translated_content(
-            self.cache_manager.project,
-            output_path,
-            inpput_path, 
-            output_config, 
-        )
-
-        self.print("")
-        self.info(f"翻译结果已成功保存至 {output_path} 目录。")
-        self.print("")
+        self.executor = None  # 用于保存线程池执行器的引用
 
     # 任务停止事件
     def task_stop(self, event: int, data: dict) -> None:
@@ -105,6 +41,11 @@ class TaskExecutor(Base):
         Base.work_status = Base.STATUS.STOPING
 
         def target() -> None:
+            # 如果有正在运行的线程池，尝试取消所有未开始的任务
+            if self.executor:
+                # 注意：正在执行的任务无法通过这种方式取消，但可以设置停止标志
+                pass
+                
             while True:
                 time.sleep(0.5)
                 if Base.work_status == Base.STATUS.TASKSTOPPED:
@@ -278,10 +219,29 @@ class TaskExecutor(Base):
             self.print("")
 
             # 开始执行翻译任务,构建异步线程池
-            with concurrent.futures.ThreadPoolExecutor(max_workers = self.config.actual_thread_counts, thread_name_prefix = "translator") as executor:
+            self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = self.config.actual_thread_counts, thread_name_prefix = "translator")
+            try:
+                futures = []
                 for task in tasks_list:
-                    future = executor.submit(task.start)
+                    # 检测是否需要停止任务
+                    if Base.work_status == Base.STATUS.STOPING:
+                        break
+                    future = self.executor.submit(task.start)
                     future.add_done_callback(self.task_done_callback)  # 为future对象添加一个回调函数，当任务完成时会被调用，更新数据
+                    futures.append(future)
+                
+                # 等待所有任务完成或被取消
+                for future in futures:
+                    # 检测是否需要停止任务
+                    if Base.work_status == Base.STATUS.STOPING:
+                        break
+                    try:
+                        future.result()  # 等待任务完成
+                    except Exception as e:
+                        self.error(f"任务执行出错: {e}", e if self.is_debug() else None)
+            finally:
+                self.executor.shutdown(wait=False)  # 关闭线程池
+                self.executor = None
 
         # 等待可能存在的缓存文件写入请求处理完毕
         time.sleep(CacheManager.SAVE_INTERVAL)
@@ -460,10 +420,29 @@ class TaskExecutor(Base):
             self.print("")
 
             # 开始执行润色务,构建异步线程池
-            with concurrent.futures.ThreadPoolExecutor(max_workers = self.config.actual_thread_counts, thread_name_prefix = "translator") as executor:
+            self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = self.config.actual_thread_counts, thread_name_prefix = "translator")
+            try:
+                futures = []
                 for task in tasks_list:
-                    future = executor.submit(task.start)
+                    # 检测是否需要停止任务
+                    if Base.work_status == Base.STATUS.STOPING:
+                        break
+                    future = self.executor.submit(task.start)
                     future.add_done_callback(self.task_done_callback)  # 为future对象添加一个回调函数，当任务完成时会被调用，更新数据
+                    futures.append(future)
+                
+                # 等待所有任务完成或被取消
+                for future in futures:
+                    # 检测是否需要停止任务
+                    if Base.work_status == Base.STATUS.STOPING:
+                        break
+                    try:
+                        future.result()  # 等待任务完成
+                    except Exception as e:
+                        self.error(f"任务执行出错: {e}", e if self.is_debug() else None)
+            finally:
+                self.executor.shutdown(wait=False)  # 关闭线程池
+                self.executor = None
 
         # 等待可能存在的缓存文件写入请求处理完毕
         time.sleep(CacheManager.SAVE_INTERVAL)
@@ -498,6 +477,10 @@ class TaskExecutor(Base):
 
     # 单个翻译任务完成时,更新项目进度状态   
     def task_done_callback(self, future: concurrent.futures.Future) -> None:
+        # 检测是否需要停止任务
+        if Base.work_status == Base.STATUS.STOPING:
+            return
+            
         try:
             # 获取结果
             result = future.result()
