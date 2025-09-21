@@ -9,8 +9,14 @@ import chardet
 import charset_normalizer
 import rich
 from bs4 import BeautifulSoup
-# from mediapipe.tasks.python import text, BaseOptions
-# from mediapipe.tasks.python.text import LanguageDetector
+try:
+    from mediapipe.tasks.python import text
+    from mediapipe.tasks.python.core import base_options
+    from mediapipe.tasks.python.text import LanguageDetector
+except ImportError:
+    text = None
+    base_options = None
+    LanguageDetector = None
 
 from ModuleFolders.Cache.CacheFile import CacheFile
 from ModuleFolders.Cache.CacheItem import CacheItem
@@ -78,6 +84,10 @@ def get_lang_detector():
     """获取语言检测器的全局单例实例"""
     global _LANG_DETECTOR_INSTANCE
     if _LANG_DETECTOR_INSTANCE is None:
+        # 检查 MediaPipe 是否可用
+        if text is None or base_options is None or LanguageDetector is None:
+            rich.print("[[red]ERROR[/]] MediaPipe 未安装或导入失败")
+            return None
         rich.print("[[green]INFO[/]] 加载 MediaPipe 文本语言检测器中...")
         # Record start time
         start_time = time.time()
@@ -97,10 +107,10 @@ def get_lang_detector():
                 model_buffer = f.read()
 
             # 使用 model_asset_buffer 而不是 model_asset_path
-            base_options = BaseOptions(model_asset_buffer=model_buffer)
+            base_options_instance = base_options.BaseOptions(model_asset_buffer=model_buffer)
             # 20250504改动：获取最多四个结果用于重新计算置信度
             # 20250609改动：在识别结果中过滤苗语(hmn)
-            options = text.LanguageDetectorOptions(base_options=base_options,
+            options = text.LanguageDetectorOptions(base_options=base_options_instance,
                                                    max_results=4, score_threshold=0.0001,
                                                    category_denylist=["hmn"])
             _LANG_DETECTOR_INSTANCE = text.LanguageDetector.create_from_options(options)
@@ -115,8 +125,8 @@ def get_lang_detector():
             # 或者根据您的应用程序进行适当处理。
             raise
 
-    # return _LANG_DETECTOR_INSTANCE
-    return None  # 暂时禁用MediaPipe
+    return _LANG_DETECTOR_INSTANCE
+    # return None  # 暂时禁用MediaPipe
 
 
 # 释放语言检测器
@@ -206,6 +216,12 @@ def detect_language_with_mediapipe(items: list[CacheItem], _start_index: int, _f
 
     # 获取语言检测器（只获取一次以提高效率）
     detector = get_lang_detector()
+    
+    # 如果检测器不可用，返回默认结果
+    if detector is None:
+        for _ in items:
+            results.append((['un'], -1.0, -1.0))
+        return results
 
     for item in items:
         # 获取原文并清理
@@ -243,40 +259,45 @@ def detect_language_with_mediapipe(items: list[CacheItem], _start_index: int, _f
             results.append((['un_again'], -1.0, -1.0))
             continue
 
-        lang_result = detector.detect(no_symbols_text).detections
-        if not lang_result:
-            results.append((['un'], -1.0, -1.0))
-        else:
-            raw_prob = lang_result[0].probability
-            first_prob = raw_prob
-            mediapipe_langs = [detection.language_code for detection in lang_result]
+        try:
+            lang_result = detector.detect(no_symbols_text).detections
+            if not lang_result:
+                results.append((['un'], -1.0, -1.0))
+            else:
+                raw_prob = lang_result[0].probability
+                first_prob = raw_prob
+                mediapipe_langs = [detection.language_code for detection in lang_result]
 
-            # 判断识别后的语言是否有非西文语言
-            has_non_latin = bool(set(mediapipe_langs) & set(NON_LATIN_ISO_CODES))
-            if has_non_latin:
-                # 如果有非西文语言出现，去掉所有的英文字母与一些符号后再识别
-                non_latin_text = re.sub(fr"[{VARIOUS_LETTERS_RANGE}'-]+", ' ', no_symbols_text)
-                # 去除多余空格
-                non_latin_text = re.sub(r'\s+', ' ', non_latin_text).strip()
-                # 判断是否为空字符串，非空串才重新识别
-                if non_latin_text:
-                    # 进行重新识别
-                    non_latin_lang_result = detector.detect(non_latin_text).detections
-                    # 如果有识别结果才重置结果
-                    if non_latin_lang_result:
-                        # 重置lang_result
-                        lang_result = non_latin_lang_result
-                        # 重置三个变量
-                        raw_prob = lang_result[0].probability
-                        first_prob = raw_prob
-                        mediapipe_langs = [detection.language_code for detection in lang_result]
+                # 判断识别后的语言是否有非西文语言
+                has_non_latin = bool(set(mediapipe_langs) & set(NON_LATIN_ISO_CODES))
+                if has_non_latin:
+                    # 如果有非西文语言出现，去掉所有的英文字母与一些符号后再识别
+                    non_latin_text = re.sub(fr"[{VARIOUS_LETTERS_RANGE}'-]+", ' ', no_symbols_text)
+                    # 去除多余空格
+                    non_latin_text = re.sub(r'\s+', ' ', non_latin_text).strip()
+                    # 判断是否为空字符串，非空串才重新识别
+                    if non_latin_text:
+                        # 进行重新识别
+                        non_latin_lang_result = detector.detect(non_latin_text).detections
+                        # 如果有识别结果才重置结果
+                        if non_latin_lang_result:
+                            # 重置lang_result
+                            lang_result = non_latin_lang_result
+                            # 重置三个变量
+                            raw_prob = lang_result[0].probability
+                            first_prob = raw_prob
+                            mediapipe_langs = [detection.language_code for detection in lang_result]
 
-            # 如果有至少两个识别结果，则使用最高置信度减去第二个
-            if len(lang_result) >= 2:
-                # 最终的mediapipe置信度
-                first_prob -= lang_result[1].probability
+                # 如果有至少两个识别结果，则使用最高置信度减去第二个
+                if len(lang_result) >= 2:
+                    # 最终的mediapipe置信度
+                    first_prob -= lang_result[1].probability
 
-            results.append((mediapipe_langs, first_prob, raw_prob))
+                results.append((mediapipe_langs, first_prob, raw_prob))
+        except Exception as e:
+            # 如果检测过程中出现异常，返回默认结果
+            rich.print(f"[[red]ERROR[/]] MediaPipe 语言检测出错: {e}")
+            results.append((['error'], -1.0, -1.0))
 
     return results
 
