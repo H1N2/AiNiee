@@ -159,10 +159,11 @@ class ArgsEditPage(MessageBoxBase, Base):
             config["platforms"][self.key]["thinking_budget"] = value
             self.save_config(config)
 
-        if self.key in preset.get("platforms"):
-            default_value = preset.get("platforms").get(self.key).get("thinking_budget")
-        else:
-            default_value = -1
+        # 安全地获取默认值
+        default_value = -1  # 默认值
+        if preset and isinstance(preset, dict) and "platforms" in preset:
+            if self.key in preset.get("platforms", {}):
+                default_value = preset.get("platforms").get(self.key).get("thinking_budget", default_value)
 
         info_cont = self.tra("请谨慎设置，对于目标接口，此参数的默认值为") + f" {default_value} (-1代表自动)"
         parent.addWidget(
@@ -232,10 +233,13 @@ class ArgsEditPage(MessageBoxBase, Base):
             config["platforms"][self.key]["top_p"] = value / 100
             self.save_config(config)
 
-        if self.key in preset.get("platforms"):
-            default_value = preset.get("platforms").get(self.key).get("top_p")
-        else:
-            default_value = preset.get("platforms").get("openai").get("top_p")
+        # 安全地获取默认值
+        default_value = 1.0  # 默认值
+        if preset and isinstance(preset, dict) and "platforms" in preset:
+            if self.key in preset.get("platforms", {}):
+                default_value = preset.get("platforms").get(self.key).get("top_p", default_value)
+            elif "openai" in preset.get("platforms", {}):
+                default_value = preset.get("platforms").get("openai").get("top_p", default_value)
 
         info_cont = self.tra("请谨慎设置，对于目标接口，此参数的默认值为") + f" {default_value}"
         parent.addWidget(
