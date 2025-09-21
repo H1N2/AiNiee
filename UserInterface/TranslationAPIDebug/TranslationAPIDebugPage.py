@@ -363,7 +363,6 @@ class TranslationAPIDebugPage(QFrame, Base):
         }
         # 设置默认选项
         source_lang = config.get("source_language", "zh-cn")
-        print('source_lang' + source_lang)
         for display_name, code in self.source_lang_map.items():
             if code == source_lang:
                 index = self.source_lang_combo.combo_box.findText(display_name)
@@ -406,7 +405,6 @@ class TranslationAPIDebugPage(QFrame, Base):
             self.tra("西班牙语"): "es"
         }
         target_lang = config.get("target_language", "en")
-        print('target_lang' + target_lang)
         for display_name, code in self.target_lang_map.items():
             if code == target_lang:
                 index = self.target_lang_combo.combo_box.findText(display_name)
